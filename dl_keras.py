@@ -49,6 +49,22 @@ numSpecs = len(specs)
 numLabels = len(labels)
 
 def get_feature_lables(fname, remove_mass_PTWINDOW=True):
+    file = tables.open_file(fname, 'r')
+    numJets = getattr(file.root, features[0]).shape[0]
+    feat_arr = np.zeros((numJets, numF))
+    spec_arr = np.zeros((numJets, numSpecs))
+    lab_arr = np.zeros((numJets, numLabels))
+
+    for (i, feat) in enumerate(features):
+        feat_arr[:,i] = getattr(file.root, feat)[:]
+
+    for (i, spec) in enumerate(specs):
+        spec_arr[:,i] = getattr(file.root, spec)[:]
+
+    for (i, label) in enumerate(labels):
+        prods = label.spl
+
+    
     return None
 
 
