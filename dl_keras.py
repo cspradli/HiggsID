@@ -74,7 +74,16 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
                          & (spec_arr[:,0] < 200) 
                          & (spec_arr[:,1] > 300) 
                          & (spec_arr[:,1] < 2000)]
+        lab_arr = lab_arr[(spec_arr[:,0] > 40)
+                         & (spec_arr[:,0] < 200)
+                         & (spec_arr[:,1] > 300)
+                         & (spec_arr[:,1] < 2000)]
+    
+    feat_arr = feat_arr[np.sum(lab_arr, axis=1)==1]
+    lab_arr = lab_arr[np.sum(lab_arr, axis=1)==1]
 
+    file.close()
+    return feat_arr, lab_arr
     
     return None
 
