@@ -62,7 +62,18 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
         spec_arr[:,i] = getattr(file.root, spec)[:]
 
     for (i, label) in enumerate(labels):
-        prods = label.spl
+        prods = label.split('*')
+        prod0 = prods[0]
+        prod1 = prods[1]
+        fact0 = getattr(file.root, prod0)[:]
+        fact1 = getattr(file.root, prod1)[:]
+        lab_arr[:,i] = np.multiply(fact0, fact1)
+    
+    if remove_mass_PTWINDOW:
+        feat_arr = feat_arr[(spec_arr[:,0] > 40)
+                         & (spec_arr[:,0] < 200) 
+                         & (spec_arr[:,1] > 300) 
+                         & (spec_arr[:,1] < 2000)]
 
     
     return None
