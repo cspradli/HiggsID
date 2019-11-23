@@ -84,8 +84,23 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
 
     file.close()
     return feat_arr, lab_arr
-    
-    return None
+
+"""if not os.path.isfile('ntuple_merged_10.h5'):
+    print("ERROR: data not found")
+    exit(1)
+"""
+inputs = Input(shape=(numF,), name='Input')
+x = BatchNormalization(name='bn_1')(inputs)
+x = Dense(64, activation='relu')(x)
+x = Dense(32, activation='relu')(x)
+x = Dense(32, activation='relu')(x)
+outputs = Dense(numLabels, activation='softmax')(x)
+keras_mod = Model(inputs=inputs, outputs=outputs)
+keras_mod.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+print(keras_mod.summary())
+
+
+
 
 
 
