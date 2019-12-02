@@ -48,6 +48,7 @@ numF = len(features)
 numSpecs = len(specs)
 numLabels = len(labels)
 
+
 def get_feature_lables(fname, remove_mass_PTWINDOW=True):
     file = tables.open_file(fname, 'r')
     numJets = getattr(file.root, features[0]).shape[0]
@@ -89,6 +90,8 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
     print("ERROR: data not found")
     exit(1)
 """
+feat_arr, lab_arr = get_feature_lables('ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
+
 inputs = Input(shape=(numF,), name='Input')
 x = BatchNormalization(name='bn_1')(inputs)
 x = Dense(64, activation='relu')(x)
@@ -98,6 +101,7 @@ outputs = Dense(numLabels, activation='softmax')(x)
 keras_mod = Model(inputs=inputs, outputs=outputs)
 keras_mod.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 print(keras_mod.summary())
+
 
 
 
