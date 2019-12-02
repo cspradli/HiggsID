@@ -1,4 +1,4 @@
-import keras
+import torch
 import numpy as np
 import tables
 from keras.models import Model
@@ -7,7 +7,6 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import os.path
-
 
 import warnings
 warnings.simplefilter("ignore")
@@ -95,52 +94,4 @@ if not os.path.isfile('data/ntuple_merged_10.h5'):
     exit(1)
 
 feat_arr, label_arr = get_feature_lables('data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
-
-inputs = Input(shape=(numF,), name='Input')
-x = BatchNormalization(name='bn_1')(inputs)
-x = Dense(64, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-outputs = Dense(numLabels, activation='softmax')(x)
-keras_mod = Model(inputs=inputs, outputs=outputs)
-keras_mod.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-print(keras_mod.summary())
-
-
-early_stopping = EarlyStopping(monitor='val_loss', patience=50)
-model_ch = ModelCheckpoint('models/keras_higgs_best.h5', monitor='val_loss', save_best_only=True)
-callb = [early_stopping, model_ch]
-
-keras_mod.fit(feat_arr, label_arr, batch_size=1024, epochs=100,
-              validation_split=0.2, shuffle=True, callbacks=callb)
-
-if not os.path.isfile('ntuple_merged_0.h5'):
-    print("ERROR: need testing data")
-    print("Need ntuple_merged_0.h5")
-    exit(0)
-
-feat_arr_test, label_arr_test = get_feature_lables('data/ntuple_merged_0.h5')
-
-keras_mod.load_weights('models/keras_higgs_best.h5')
-
-predict_arr_test = keras_mod.predict(feat_arr_test)
-
-fpr, tpr, threshold = roc_curve(label_arr_test[:,1], predict_arr_test[:,1])
-
-plt.figure()
-plt.plot(tpr, fpr, lw=2.5, label="AUC = {:.2f}%".format(auc(fpr,tpr)*100))
-plt.xlabel(r'True positive rate')
-plt.ylabel(r'False positive rate')
-plt.semilogy()
-plt.ylim(0.01,1)
-plt.xlim(0,1)
-plt.grid(True)
-plt.legend(loc='upper left')
-plt.tight_layout()
-plt.savefig('auc_score.png')
-plt.savefig('auc_score.pdf')
-
-
 
