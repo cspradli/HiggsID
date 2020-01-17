@@ -94,11 +94,11 @@ def get_feature_lables(fname, PTWINDOW=True):
     return feat_arr, lab_arr
 
 ### Using premade training data from CERN ###
-if not os.path.isfile('data/ntuple_merged_10.h5'):
+if not os.path.isfile('Data/ntuple_merged_10.h5'):
     print("ERROR: data not found")
     exit(1)
 
-feat_arr, label_arr = get_feature_lables('data/ntuple_merged_10.h5', PTWINDOW=False)
+feat_arr, label_arr = get_feature_lables('Data/ntuple_merged_10.h5', PTWINDOW=False)
 
 ### Model being put together ###
 inputs = Input(shape=(numF,), name='Input')
@@ -125,12 +125,12 @@ keras_mod.fit(feat_arr, label_arr, batch_size=1024, epochs=100,
 
 ########### Testing for fit model #############
 ### using premade testing dataset from CERN ###
-if not os.path.isfile('ntuple_merged_0.h5'):
+if not os.path.isfile('Data/ntuple_merged_0.h5'):
     print("ERROR: need testing data")
     print("Need ntuple_merged_0.h5")
     exit(0)
 
-feat_arr_test, label_arr_test = get_feature_lables('data/ntuple_merged_0.h5')
+feat_arr_test, label_arr_test = get_feature_lables('Data/ntuple_merged_0.h5')
 keras_mod.load_weights('models/keras_higgs_best.h5')
 predict_arr_test = keras_mod.predict(feat_arr_test)
 
