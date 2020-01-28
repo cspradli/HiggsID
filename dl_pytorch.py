@@ -169,6 +169,8 @@ for e in range(epochs):
 
     running_loss = 0
     for images, labels in trainloader:
+
+
         images = images.view(images.shape[0],-1)
         optimizer.zero_grad()
         output = model(images)
@@ -184,18 +186,18 @@ for e in range(epochs):
 
 
 correct_count, all_count = 0, 0
-for X,Y in valloader:
-  for i in range(len(Y)):
-    x = X[i].view(1, 784)
+for im,labels in valloader:
+  for i in range(len(labels)):
+    candidate = im[i].view(1, 784)
     # Turn off gradients to speed up this part
     with torch.no_grad():
-        logps = model(x)
+        logps = model(candidate)
 
     # Output of the network are log-probabilities, need to take exponential for probabilities
     ps = torch.exp(logps)
     probab = list(ps.numpy()[0])
     pred_label = probab.index(max(probab))
-    true_label = X.numpy()[i]
+    true_label = im.numpy()[i]
     if(true_label == pred_label):
       correct_count += 1
     all_count += 1
