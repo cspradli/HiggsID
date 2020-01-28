@@ -7,6 +7,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import os.path
+import copy
 
 ### Attempting to get rid of TF and Keras warnings about deprecation ###
 import warnings
@@ -103,10 +104,11 @@ feat_arr, label_arr = get_feature_lables('Data/ntuple_merged_10.h5', PTWINDOW=Fa
 ### Model being put together ###
 inputs = Input(shape=(numF,), name='Input')
 x = BatchNormalization(name='bn_1')(inputs)
+x = Dense(256, activation='relu')(x)
+x = Dense(128, activation='relu')(x)
 x = Dense(64, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
-x = Dense(32, activation='relu')(x)
+x = Dense(64, activation='relu')(x)
+x = Dense(64, activation='relu')(x)
 x = Dense(32, activation='relu')(x)
 outputs = Dense(numLabels, activation='softmax')(x)
 keras_mod = Model(inputs=inputs, outputs=outputs)
@@ -114,12 +116,12 @@ keras_mod.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['a
 print(keras_mod.summary())
 
 ### Check to make sure we aren't over training ###
-early_stopping = EarlyStopping(monitor='val_loss', patience=50)
+early_stopping = EarlyStopping(monitor='val_loss', patience=100)
 model_ch = ModelCheckpoint('models/keras_higgs_best.h5', monitor='val_loss', save_best_only=True)
 callb = [early_stopping, model_ch]
 
 ### Fit the model ###
-keras_mod.fit(feat_arr, label_arr, batch_size=1024, epochs=100,
+history = keras_mod.fit(feat_arr, label_arr, batch_size=1024, epochs=1000,
               validation_split=0.2, shuffle=True, callbacks=callb)
 
 
@@ -136,7 +138,7 @@ predict_arr_test = keras_mod.predict(feat_arr_test)
 
 
 ########### Plot ROC curve for AUC score #############
-fpr, tpr, threshold = roc_curve(label_arr_test[:,1], predict_arr_test[:,1])
+"""fpr, tpr, threshold = roc_curve(label_arr_test[:,1], predict_arr_test[:,1])
 plt.figure()
 plt.plot(tpr, fpr, lw=2.5, label="AUC = {:.2f}%".format(auc(fpr,tpr)*100))
 plt.xlabel(r'True positive rate')
@@ -149,6 +151,43 @@ plt.legend(loc='upper left')
 plt.tight_layout()
 plt.savefig('auc_score.png')
 plt.savefig('auc_score.pdf')
+"""
 
+"""
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.savefig('error_.png')
+plt.savefig('error_.pdf')
 
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.savefig('error_1.png')
+plt.savefig('error_2.pdf')
+"""
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('error_.png')
+plt.savefig('error_.pdf')
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('error_1.png')
+plt.savefig('error_2.pdf')
 
