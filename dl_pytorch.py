@@ -34,13 +34,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #input_size = 16
 #hidden_sizes = [256, 128, 64, 64, 64, 32]
 #output_size = 2
+global_step = 0
+
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
-    
+    global global_step
     ## Choose between loss criterion ##
     criterion = nn.NLLLoss()
     #criterion = nn.CrossEntropyLoss(size_average=False)
-    
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -51,8 +52,11 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     model.train()
     mt_model.train()
     for images, labels in train_loader:
+
+        global_step += 1
+
         images = images.view(images.shape[0],-1)
-        global_step = epoch * len(train_loader)
+
         #input_var = torch.autograd.Variable(images)
         #mt_input = torch.autograd.Variable(images)
         #target_var = torch.autograd.Variable(labels)
