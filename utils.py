@@ -28,6 +28,14 @@ class VisdomLinePlotter(object):
         self.viz = Visdom()
         self.env = env_name
         self.plots = {}
+        self.text_box = {}
+        
+    def set_text(self, var_name, text):
+        if var_name not in self.text_box:
+            self.text_box[var_name] = self.viz.text(text)
+        else:
+            self.viz.text(text)
+
     def plot(self, var_name, split_name, title_name, x, y1):
         if var_name not in self.plots:
             self.plots[var_name] = self.viz.line(X=np.array([x,x]), Y=np.array([y1,y1]), env=self.env, opts=dict(

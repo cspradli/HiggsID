@@ -92,6 +92,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     else:
          plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
          plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
+         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
          print("Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
          print("Teacher - Epoch {} - Training loss: {}".format(e, run_loss_mt/len(trainloader)))
          print()
