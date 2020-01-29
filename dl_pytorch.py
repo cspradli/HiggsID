@@ -15,7 +15,7 @@ import tables
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import os.path
-
+from mean_teacher.mean_teacher import AddGaussianNoise
 from mean_teacher import dataset
 from mean_teacher import loss_functions
 from mean_teacher import mean_teacher
@@ -88,10 +88,48 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
          print()
 
     
+def test(device, model, mt_model, test_loader):
+  model.eval()
+  mt_model.eval()
+  test_loss1 = 0
+  test_loss2 = 0
+  correct1 = 0
+  correct2 = 0
+
+  with torch.no_grad():
+    
+    for data, target in test_loader:
+      data = data.view(data.shape[0],-1)
+      data, target = data.to(device), target.to(device)
+      
+      output1 = model(data)
+      output2 = mt_model(data)
+
+      test_loss1 += F.nll_loss(output1, target, reduction='sum').item()
+      test_loss2 += F.nll_loss(output2, target, reduction='sum').item()
+
+      pred1 = output1.argmax(dim=1, keepdim=True)
+      pred2 = output2.argmax(dim=1, keepdim=True)
+
+      correct1 += pred1.eq(target.view_as(pred1)).sum().item()
+      correct2 += pred2.eq(target.view_as(pred2)).sum().item()
+
+    test_loss1 /= len(test_loader.dataset)
+    test_loss2 /= len(test_loader.dataset)
+
+    print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+      test_loss1, correct1, len(test_loader.dataset),
+      100. * correct1 / len(test_loader.dataset)))
+    print('\nTeacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+      test_loss2, correct2, len(test_loader.dataset),
+      100. * correct2 / len(test_loader.dataset)))
+
+
 
 """Use this data until figure out other data problem"""
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (0.5,)),
+                                AddGaussianNoise(0.,1.)
                               ])
 trainset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
 valset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
@@ -141,26 +179,8 @@ for e in range(epochs):
     train(trainloader, model, mt_model, optimizer, e, ema_const=0.95)
 
 
+test(device, model, mt_model, valloader)
 
 
-correct_count, all_count = 0, 0
-for im,labels in valloader:
-  for i in range(len(labels)):
-    candidate = im[i].view(1, 784)
-    # Turn off gradients to speed up this part
-    with torch.no_grad():
-        logps = model(candidate)
-
-    # Output of the network are log-probabilities, need to take exponential for probabilities
-    ps = torch.exp(logps)
-    probab = list(ps.numpy()[0])
-    pred_label = probab.index(max(probab))
-    true_label = im.numpy()[i]
-    if(true_label == pred_label):
-      correct_count += 1
-    all_count += 1
-
-print("Number Of Images Tested =", all_count)
-print("\nModel Accuracy =", (correct_count/all_count))
 
 
