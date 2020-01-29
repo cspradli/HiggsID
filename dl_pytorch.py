@@ -137,10 +137,10 @@ def test(device, model, mt_model, test_loader, epoch):
     accuracy1 = 100. * correct1 / len(test_loader.dataset)
     accuracy2 = 100. * correct2 / len(test_loader.dataset)
 
-    print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
       test_loss1, correct1, len(test_loader.dataset),
       100. * correct1 / len(test_loader.dataset)))
-    print('\nTeacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('Teacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
       test_loss2, correct2, len(test_loader.dataset),
       100. * correct2 / len(test_loader.dataset)))
     #plotter.plot('Validation Loss', 'val', 'Class Loss', epoch, losses1.avg)
