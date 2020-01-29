@@ -37,9 +37,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #output_size = 2
 global_step = 0
 global plotter1
-plotter1 = utils.VisdomLinePlotter(env_name='Tutorial Plots')
+plotter1 = utils.VisdomLinePlotter(env_name='main')
 global plotter2
-plotter2 = utils.VisdomLinePlotter(env_name='Tutorial Plots')
+plotter2 = utils.VisdomLinePlotter(env_name='main')
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     global global_step
@@ -97,10 +97,11 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
          print()
 
     
-def test(device, model, mt_model, test_loader):
+def test(device, model, mt_model, test_loader, epoch):
 
   losses1 = utils.AverageMeter()
   losses2 = utils.AverageMeter()
+  criterion = nn.NLLLoss()
 
   model.eval()
   mt_model.eval()
@@ -121,8 +122,8 @@ def test(device, model, mt_model, test_loader):
       test_loss1 += F.nll_loss(output1, target, reduction='sum').item()
       test_loss2 += F.nll_loss(output2, target, reduction='sum').item()
 
-      losses1.update(test_loss1.data.cpu().numpy(), target.size(0))
-      losses2.update(test_loss2.data.cpu().numpy(), target.size(0))
+      #losses1.update(test_loss1.data.cpu().numpy(), target.size(0))
+      #losses2.update(test_loss2.data.cpu().numpy(), target.size(0))
 
       pred1 = output1.argmax(dim=1, keepdim=True)
       pred2 = output2.argmax(dim=1, keepdim=True)
@@ -133,6 +134,9 @@ def test(device, model, mt_model, test_loader):
     test_loss1 /= len(test_loader.dataset)
     test_loss2 /= len(test_loader.dataset)
 
+    accuracy1 = 100. * correct1 / len(test_loader.dataset)
+    accuracy2 = 100. * correct2 / len(test_loader.dataset)
+
     print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
       test_loss1, correct1, len(test_loader.dataset),
       100. * correct1 / len(test_loader.dataset)))
@@ -140,7 +144,8 @@ def test(device, model, mt_model, test_loader):
       test_loss2, correct2, len(test_loader.dataset),
       100. * correct2 / len(test_loader.dataset)))
     #plotter.plot('Validation Loss', 'val', 'Class Loss', epoch, losses1.avg)
-    #plotter.plot('Accuracy', 'val', 'Class Accuracy', epoch, acc)
+    plotter1.plot('Accuracy', 'Student Validation', 'Model Accuracy', epoch, accuracy1)
+    plotter1.plot('Accuracy', 'Teacher Validation', 'Model Accuracy', epoch, accuracy2)
 
 
 
@@ -195,9 +200,10 @@ for e in range(epochs):
     start_time = time.time()
     running_loss = 0
     train(trainloader, model, mt_model, optimizer, e, ema_const=0.95)
+    test(device, model, mt_model, valloader, e)
 
 
-test(device, model, mt_model, valloader)
+
 
 
 
