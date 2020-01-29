@@ -18,6 +18,7 @@ import os.path
 
 from mean_teacher import dataset
 from mean_teacher import loss_functions
+from mean_teacher import mean_teacher
 import warnings
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -34,7 +35,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #hidden_sizes = [256, 128, 64, 64, 64, 32]
 #output_size = 2
 
-def train(train_loader, model, mt_model, optimizer, epoch):
+def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     
     ## Choose between loss criterion ##
     criterion = nn.NLLLoss()
@@ -42,15 +43,16 @@ def train(train_loader, model, mt_model, optimizer, epoch):
     
     ##Running loss for output ##
     run_loss = 0
-    
+    run_loss_mt = 0
+
     consistency_criterion = loss_functions.softmax_meanse
 
     ## Set both models to training mode ##
     model.train()
     mt_model.train()
-
     for images, labels in train_loader:
         images = images.view(images.shape[0],-1)
+        global_step = epoch * len(train_loader)
         #input_var = torch.autograd.Variable(images)
         #mt_input = torch.autograd.Variable(images)
         #target_var = torch.autograd.Variable(labels)
@@ -67,13 +69,19 @@ def train(train_loader, model, mt_model, optimizer, epoch):
 
         optimizer.zero_grad()
         loss.backward()
-        loss_mt.backward
+        loss_mt.backward()
         optimizer.step()
+
+        mean_teacher.update_mt(model, mt_model, ema_const, global_step)
+
         end = time.time()
         run_loss += loss.item()
+        run_loss_mt += loss_mt.item()
 
     else:
-         print("Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
+         print("Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
+         print("Teacher - Epoch {} - Training loss: {}".format(e, run_loss_mt/len(trainloader)))
+         print()
 
     
 
@@ -126,7 +134,7 @@ epochs = 10
 for e in range(epochs):
     start_time = time.time()
     running_loss = 0
-    train(trainloader, model, mt_model, optimizer, e)
+    train(trainloader, model, mt_model, optimizer, e, ema_const=0.95)
 
 
 
