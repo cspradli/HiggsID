@@ -9,6 +9,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.autograd import Variable
 
+import utils
 import time
 import numpy as np
 import tables
@@ -35,10 +36,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #hidden_sizes = [256, 128, 64, 64, 64, 32]
 #output_size = 2
 global_step = 0
-
+global plotter1
+plotter1 = utils.VisdomLinePlotter(env_name='Tutorial Plots')
+global plotter2
+plotter2 = utils.VisdomLinePlotter(env_name='Tutorial Plots')
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     global global_step
+    losses1 = utils.AverageMeter()
+    losses2 = utils.AverageMeter()
     ## Choose between loss criterion ##
     criterion = nn.NLLLoss()
     #criterion = nn.CrossEntropyLoss(size_average=False)
@@ -66,7 +72,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
         model_out = model(images)
         loss = criterion(model_out, labels)
         loss_mt = criterion(mt_out, labels)
-
+        losses1.update(loss.data.cpu().numpy(), labels.size(0))
+        losses2.update(loss_mt.data.cpu().numpy(), labels.size(0))
         ## Get MSE loss ##
         #cl_loss = consistency_criterion(model_out, labels)
         #mt_loss = consistency_criterion(mt_out, labels)
@@ -83,12 +90,18 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
         run_loss_mt += loss_mt.item()
 
     else:
+         plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
+         plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
          print("Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
          print("Teacher - Epoch {} - Training loss: {}".format(e, run_loss_mt/len(trainloader)))
          print()
 
     
 def test(device, model, mt_model, test_loader):
+
+  losses1 = utils.AverageMeter()
+  losses2 = utils.AverageMeter()
+
   model.eval()
   mt_model.eval()
   test_loss1 = 0
@@ -108,6 +121,9 @@ def test(device, model, mt_model, test_loader):
       test_loss1 += F.nll_loss(output1, target, reduction='sum').item()
       test_loss2 += F.nll_loss(output2, target, reduction='sum').item()
 
+      losses1.update(test_loss1.data.cpu().numpy(), target.size(0))
+      losses2.update(test_loss2.data.cpu().numpy(), target.size(0))
+
       pred1 = output1.argmax(dim=1, keepdim=True)
       pred2 = output2.argmax(dim=1, keepdim=True)
 
@@ -123,6 +139,8 @@ def test(device, model, mt_model, test_loader):
     print('\nTeacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
       test_loss2, correct2, len(test_loader.dataset),
       100. * correct2 / len(test_loader.dataset)))
+    #plotter.plot('Validation Loss', 'val', 'Class Loss', epoch, losses1.avg)
+    #plotter.plot('Accuracy', 'val', 'Class Accuracy', epoch, acc)
 
 
 
