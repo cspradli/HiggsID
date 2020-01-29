@@ -121,25 +121,12 @@ print(model)
 print(mt_model)
 
 optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-epochs = 5
+epochs = 10
 
 for e in range(epochs):
     start_time = time.time()
     running_loss = 0
     train(trainloader, model, mt_model, optimizer, e)
-    """for images, labels in trainloader:
-
-
-        images = images.view(images.shape[0],-1)
-        optimizer.zero_grad()
-        output = model(images)
-        loss = criterion(output, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-    else:"""
-    #print("Epoch {} - Training loss: {}".format(e, running_loss/len(trainloader)))
 
 
 
