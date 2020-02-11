@@ -67,6 +67,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     ## Choose between loss criterion ##
     #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss(size_average=False)
+    
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -87,11 +88,12 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
         mt_input = torch.autograd.Variable(images)
         target_var = torch.autograd.Variable(labels)
       
-
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
+        
         loss = criterion(model_out, torch.max(target_var, 1)[1])
         loss_mt = criterion(mt_out, torch.max(target_var, 1)[1])
+
         losses1.update(loss.data.cpu().numpy(), labels.size(0))
         losses2.update(loss_mt.data.cpu().numpy(), labels.size(0))
         ## Get MSE loss ##
@@ -119,7 +121,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
 
     
 def test(device, model, mt_model, test_loader, epoch):
-
+  """ Test is used to validate the training of the model on unseen data
+  this method takes both models and the loader and runs a series of accuracy tests """
   losses1 = utils.AverageMeter()
   losses2 = utils.AverageMeter()
   criterion = nn.NLLLoss()
@@ -139,9 +142,12 @@ def test(device, model, mt_model, test_loader, epoch):
       mt_input = torch.autograd.Variable(data)
       target_var = torch.autograd.Variable(target)
       target_var_up = torch.max(target_var, 1)[1]
+
+      # Get y' from the model
       output1 = model(data)
       output2 = mt_model(data)
 
+      # Check y' against y
       test_loss1 += F.nll_loss(output1, target_var_up, reduction='sum').item()
       test_loss2 += F.nll_loss(output2, target_var_up, reduction='sum').item()
 
