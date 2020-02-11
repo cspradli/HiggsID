@@ -26,7 +26,7 @@ import warnings
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-### Get the data from the HDF5 files, return the feature data alongide the 
+### Get the data from the HDF5 files, return the feature data alongide the
 feat_arr, label_arr = dataset.get_feature_lables('Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
 test_feat, test_label = dataset.get_feature_lables('Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
 
@@ -67,7 +67,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     ## Choose between loss criterion ##
     #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss(size_average=False)
-    
+
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -83,14 +83,14 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
         global_step += 1
 
         #images = images.view(images.shape[0],-1)
-        
+
         input_var = torch.autograd.Variable(data)
         mt_input = torch.autograd.Variable(data)
         target_var = torch.autograd.Variable(labels)
-      
+
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
-        
+
         loss = criterion(model_out, torch.max(target_var, 1)[1])
         loss_mt = criterion(mt_out, torch.max(target_var, 1)[1])
 
@@ -119,7 +119,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
          print("Teacher - Epoch {} - Training loss: {}".format(e, run_loss_mt/len(dat_loader)))
          print()
 
-    
+
 def test(device, model, mt_model, test_loader, epoch):
   """ Test is used to validate the training of the model on unseen data
   this method takes both models and the loader and runs a series of accuracy tests """
@@ -135,9 +135,9 @@ def test(device, model, mt_model, test_loader, epoch):
   correct2 = 0
 
   with torch.no_grad():
-    
+
     for data, target in test_loader:
-        
+
       input_var = torch.autograd.Variable(data)
       mt_input = torch.autograd.Variable(data)
       target_var = torch.autograd.Variable(target)
@@ -222,7 +222,7 @@ mt_model = nn.Sequential(nn.Linear(27, 256),
 
 print(model)
 print(mt_model)
-
+## Choose optimizer ##
 optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
 epochs = 10
 
@@ -231,10 +231,3 @@ for e in range(epochs):
     running_loss = 0
     train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
     test(device, model, mt_model, test_loader, e)
-
-
-
-
-
-
-
