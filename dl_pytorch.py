@@ -78,14 +78,14 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     model.train()
     mt_model.train()
 
-    for images, labels in dat_loader:
+    for data, labels in dat_loader:
 
         global_step += 1
 
         #images = images.view(images.shape[0],-1)
         
-        input_var = torch.autograd.Variable(images)
-        mt_input = torch.autograd.Variable(images)
+        input_var = torch.autograd.Variable(data)
+        mt_input = torch.autograd.Variable(data)
         target_var = torch.autograd.Variable(labels)
       
         mt_out = mt_model(input_var)
