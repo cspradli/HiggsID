@@ -1,6 +1,7 @@
 import os.path
 import h5py
-
+import tables
+import numpy as np
 # 27 features to train off of
 features = ['fj_jetNTracks',
             'fj_nSV',
