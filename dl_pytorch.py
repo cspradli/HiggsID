@@ -30,14 +30,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 feat_arr, label_arr = dataset.get_feature_lables('Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
 test_feat, test_label = dataset.get_feature_lables('Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
 
-
 #### Convert the numpy data to a Torch-ready data type ###
 X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
 Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
 
 testX = Variable(torch.from_numpy(test_feat).float(), requires_grad=False)
 testY = Variable(torch.from_numpy(test_label).float(), requires_grad=False)
-
 
 ### Turn all the data into a Tensor viable dataset AND dataloader for efficiency ###
 test_set = data.TensorDataset(testX, testY)
@@ -52,13 +50,11 @@ hidden_sizes = [256, 128, 64, 64, 64, 32]
 output_size = 2
 global_step = 0
 
-
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
 global plotter2
 plotter2 = utils.VisdomLinePlotter(env_name='main')
-
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     global global_step
@@ -176,16 +172,11 @@ def test(device, model, mt_model, test_loader, epoch):
     plotter1.plot('Accuracy', 'Student Validation', 'Model Accuracy', epoch, accuracy1)
     plotter1.plot('Accuracy', 'Teacher Validation', 'Model Accuracy', epoch, accuracy2)
 
-
-
 """Use this data until figure out other data problem"""
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (0.5,)),
                                 AddGaussianNoise(0.,1.)
                               ])
-
-
-
 
 """model = nn.Sequential(
     nn.Linear(input_size, hidden_sizes[0]),
