@@ -30,6 +30,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 feat_arr, label_arr = dataset.get_feature_lables('Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
 test_feat, test_label = dataset.get_feature_lables('Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
 
+print(feat_arr)
+
+print(label_arr)
 
 #### Convert the numpy data to a Torch-ready data type ###
 X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
@@ -41,16 +44,12 @@ testY = Variable(torch.from_numpy(test_label).float(), requires_grad=False)
 
 ### Turn all the data into a Tensor viable dataset AND dataloader for efficiency ###
 test_set = data.TensorDataset(testX, testY)
-test_loader = data.DataLoader(test_set, batch_size=64)
+test_loader = data.DataLoader(test_set, batch_size=1024, shuffle=True)
 
 dat_set = data.TensorDataset(X, Y)
-dat_loader = data.DataLoader(dat_set, batch_size=64)
+dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 
-### Input sizes to be used for the models ###
-input_size = 16
-hidden_sizes = [256, 128, 64, 64, 64, 32]
-output_size = 2
-global_step = 0
+
 
 
 # Get visdom ready to go #
@@ -65,8 +64,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
     ## Choose between loss criterion ##
-    #criterion = nn.NLLLoss()
-    criterion = nn.CrossEntropyLoss(size_average=False)
+    criterion = nn.NLLLoss()
+    #criterion = nn.CrossEntropyLoss(size_average=False)
     
     ##Running loss for output ##
     run_loss = 0
@@ -82,11 +81,11 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
 
         global_step += 1
 
-        #images = images.view(images.shape[0],-1)
+        images = images.view(images.shape[0],-1)
         
-        input_var = torch.autograd.Variable(images)
-        mt_input = torch.autograd.Variable(images)
-        target_var = torch.autograd.Variable(labels)
+        input_var = images #torch.autograd.Variable(images)
+        mt_input = images #torch.autograd.Variable(images)
+        target_var = labels #torch.autograd.Variable(labels)
       
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
@@ -138,6 +137,8 @@ def test(device, model, mt_model, test_loader, epoch):
     
     for data, target in test_loader:
         
+      data = data.view(data.shape[0], -1)
+
       input_var = torch.autograd.Variable(data)
       mt_input = torch.autograd.Variable(data)
       target_var = torch.autograd.Variable(target)
@@ -184,9 +185,12 @@ transform = transforms.Compose([transforms.ToTensor(),
                                 AddGaussianNoise(0.,1.)
                               ])
 
-
-
-
+"""
+trainset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
+valset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+valloader = torch.utils.data.DataLoader(valset, batch_size=64, shuffle=True)
+"""
 """model = nn.Sequential(
     nn.Linear(input_size, hidden_sizes[0]),
     nn.ReLU(),
@@ -201,19 +205,50 @@ transform = transforms.Compose([transforms.ToTensor(),
     nn.Linear(hidden_sizes[4], output_size),
     nn.Softmax(dim=1)
 )"""
+### Input sizes to be used for the models ###
+input_size = 27
+hidden_sizes = [256, 128, 64, 64, 64, 32]
+output_size = 2
+global_step = 0
+"""
+model = nn.Sequential(
+    nn.Linear(input_size, hidden_sizes[0]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[0], hidden_sizes[1]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[1], hidden_sizes[2]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[2], hidden_sizes[3]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[3], hidden_sizes[4]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[4], output_size),
+    nn.Softmax(dim=1)
+)
 
-model = nn.Sequential(nn.Linear(27, 256),
-                      nn.ReLU(),
-                      nn.Linear(256, 128),
+mt_model = nn.Sequential(
+    nn.Linear(input_size, hidden_sizes[0]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[0], hidden_sizes[1]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[1], hidden_sizes[2]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[2], hidden_sizes[3]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[3], hidden_sizes[4]),
+    nn.ReLU(),
+    nn.Linear(hidden_sizes[4], output_size),
+    nn.Softmax(dim=1)
+)"""
+
+model = nn.Sequential(nn.Linear(27, 128),
                       nn.ReLU(),
                       nn.Linear(128, 64),
                       nn.ReLU(),
                       nn.Linear(64, 2),
                       nn.LogSoftmax(dim=1))
 
-mt_model = nn.Sequential(nn.Linear(27, 256),
-                      nn.ReLU(),
-                      nn.Linear(256, 128),
+mt_model = nn.Sequential(nn.Linear(27, 128),
                       nn.ReLU(),
                       nn.Linear(128, 64),
                       nn.ReLU(),
@@ -223,8 +258,12 @@ mt_model = nn.Sequential(nn.Linear(27, 256),
 print(model)
 print(mt_model)
 
-optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-epochs = 10
+#optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
+optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
+#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0, amsgrad=False)
+#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
+epochs = 50
 
 for e in range(epochs):
     start_time = time.time()
