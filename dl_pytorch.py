@@ -74,7 +74,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
     model.train()
     mt_model.train()
 
-    for data, labels in dat_loader:
+    for images, labels in dat_loader:
 
         global_step += 1
 
@@ -254,10 +254,10 @@ print(model)
 print(mt_model)
 
 #optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
-#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0, amsgrad=False)
-#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
+optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0, weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
+#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
+#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
 epochs = 50
 
 for e in range(epochs):
