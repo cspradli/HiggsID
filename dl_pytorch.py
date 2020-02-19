@@ -26,9 +26,11 @@ import warnings
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-### Get the data from the HDF5 files, return the feature data alongide the
-feat_arr, label_arr = dataset.get_feature_lables('Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
-test_feat, test_label = dataset.get_feature_lables('Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
+# Get the data from the HDF5 files, return the feature data alongide the
+feat_arr, label_arr = dataset.get_feature_lables(
+    'Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
+test_feat, test_label = dataset.get_feature_lables(
+    'Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
 
 print(feat_arr)
 
@@ -49,21 +51,21 @@ dat_set = data.TensorDataset(X, Y)
 dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 
 
-
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
 global plotter2
 plotter2 = utils.VisdomLinePlotter(env_name='main')
 
-def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
+
+def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
     ## Choose between loss criterion ##
     criterion = nn.NLLLoss()
     #criterion = nn.CrossEntropyLoss(size_average=False)
-    
+
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -78,12 +80,12 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
 
         global_step += 1
 
-        images = images.view(images.shape[0],-1)
-        
-        input_var = images #torch.autograd.Variable(images)
-        mt_input = images #torch.autograd.Variable(images)
-        target_var = labels #torch.autograd.Variable(labels)
-      
+        images = images.view(images.shape[0], -1)
+
+        input_var = images  # torch.autograd.Variable(images)
+        mt_input = images  # torch.autograd.Variable(images)
+        target_var = labels  # torch.autograd.Variable(labels)
+
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
 
@@ -108,77 +110,84 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const = 0.95):
         run_loss_mt += loss_mt.item()
 
     else:
-         plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
-         plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
-         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
-         print("Student - Epoch {} - Training loss: {}".format(e, run_loss/len(dat_loader)))
-         print("Teacher - Epoch {} - Training loss: {}".format(e, run_loss_mt/len(dat_loader)))
-         print()
+        plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
+        plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
+        #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
+        print("Student - Epoch {} - Training loss: {}".format(e,
+                                                              run_loss/len(dat_loader)))
+        print("Teacher - Epoch {} - Training loss: {}".format(e,
+                                                              run_loss_mt/len(dat_loader)))
+        print()
 
 
 def test(device, model, mt_model, test_loader, epoch):
-  """ Test is used to validate the training of the model on unseen data
-  this method takes both models and the loader and runs a series of accuracy tests """
-  losses1 = utils.AverageMeter()
-  losses2 = utils.AverageMeter()
-  criterion = nn.NLLLoss()
+    """ Test is used to validate the training of the model on unseen data
+    this method takes both models and the loader and runs a series of accuracy tests """
+    losses1 = utils.AverageMeter()
+    losses2 = utils.AverageMeter()
+    criterion = nn.NLLLoss()
 
-  model.eval()
-  mt_model.eval()
-  test_loss1 = 0
-  test_loss2 = 0
-  correct1 = 0
-  correct2 = 0
+    model.eval()
+    mt_model.eval()
+    test_loss1 = 0
+    test_loss2 = 0
+    correct1 = 0
+    correct2 = 0
 
-  with torch.no_grad():
+    with torch.no_grad():
 
-    for data, target in test_loader:
-        
-      data = data.view(data.shape[0], -1)
+        for data, target in test_loader:
 
-      input_var = torch.autograd.Variable(data)
-      mt_input = torch.autograd.Variable(data)
-      target_var = torch.autograd.Variable(target)
-      target_var_up = torch.max(target_var, 1)[1]
+            data = data.view(data.shape[0], -1)
 
-      # Get y' from the model
-      output1 = model(data)
-      output2 = mt_model(data)
+            input_var = torch.autograd.Variable(data)
+            mt_input = torch.autograd.Variable(data)
+            target_var = torch.autograd.Variable(target)
+            target_var_up = torch.max(target_var, 1)[1]
 
-      # Check y' against y
-      test_loss1 += F.nll_loss(output1, target_var_up, reduction='sum').item()
-      test_loss2 += F.nll_loss(output2, target_var_up, reduction='sum').item()
+            # Get y' from the model
+            output1 = model(data)
+            output2 = mt_model(data)
 
-      #losses1.update(test_loss1.data.cpu().numpy(), target.size(0))
-      #losses2.update(test_loss2.data.cpu().numpy(), target.size(0))
+            # Check y' against y
+            test_loss1 += F.nll_loss(output1, target_var_up,
+                                     reduction='sum').item()
+            test_loss2 += F.nll_loss(output2, target_var_up,
+                                     reduction='sum').item()
 
-      pred1 = output1.argmax(dim=1, keepdim=True)
-      pred2 = output2.argmax(dim=1, keepdim=True)
+            #losses1.update(test_loss1.data.cpu().numpy(), target.size(0))
+            #losses2.update(test_loss2.data.cpu().numpy(), target.size(0))
 
-      correct1 += pred1.eq(target_var_up.view_as(pred1)).sum().item()
-      correct2 += pred2.eq(target_var_up.view_as(pred2)).sum().item()
+            pred1 = output1.argmax(dim=1, keepdim=True)
+            pred2 = output2.argmax(dim=1, keepdim=True)
 
-    test_loss1 /= len(test_loader.dataset)
-    test_loss2 /= len(test_loader.dataset)
+            correct1 += pred1.eq(target_var_up.view_as(pred1)).sum().item()
+            correct2 += pred2.eq(target_var_up.view_as(pred2)).sum().item()
 
-    accuracy1 = 100. * correct1 / len(test_loader.dataset)
-    accuracy2 = 100. * correct2 / len(test_loader.dataset)
+        test_loss1 /= len(test_loader.dataset)
+        test_loss2 /= len(test_loader.dataset)
 
-    print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
-      test_loss1, correct1, len(test_loader.dataset),
-      100. * correct1 / len(test_loader.dataset)))
-    print('Teacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-      test_loss2, correct2, len(test_loader.dataset),
-      100. * correct2 / len(test_loader.dataset)))
-    #plotter.plot('Validation Loss', 'val', 'Class Loss', epoch, losses1.avg)
-    plotter1.plot('Accuracy', 'Student Validation', 'Model Accuracy', epoch, accuracy1)
-    plotter1.plot('Accuracy', 'Teacher Validation', 'Model Accuracy', epoch, accuracy2)
+        accuracy1 = 100. * correct1 / len(test_loader.dataset)
+        accuracy2 = 100. * correct2 / len(test_loader.dataset)
+
+        print('\nStudent test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
+            test_loss1, correct1, len(test_loader.dataset),
+            100. * correct1 / len(test_loader.dataset)))
+        print('Teacher test Set: AVG Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+            test_loss2, correct2, len(test_loader.dataset),
+            100. * correct2 / len(test_loader.dataset)))
+        #plotter.plot('Validation Loss', 'val', 'Class Loss', epoch, losses1.avg)
+        plotter1.plot('Accuracy', 'Student Validation',
+                      'Model Accuracy', epoch, accuracy1)
+        plotter1.plot('Accuracy', 'Teacher Validation',
+                      'Model Accuracy', epoch, accuracy2)
+
 
 """Use this data until figure out other data problem"""
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (0.5,)),
-                                AddGaussianNoise(0.,1.)
-                              ])
+                                AddGaussianNoise(0., 1.)
+                                ])
 
 """
 trainset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
@@ -244,17 +253,18 @@ model = nn.Sequential(nn.Linear(27, 128),
                       nn.LogSoftmax(dim=1))
 
 mt_model = nn.Sequential(nn.Linear(27, 128),
-                      nn.ReLU(),
-                      nn.Linear(128, 64),
-                      nn.ReLU(),
-                      nn.Linear(64, 2),
-                      nn.LogSoftmax(dim=1))
+                         nn.ReLU(),
+                         nn.Linear(128, 64),
+                         nn.ReLU(),
+                         nn.Linear(64, 2),
+                         nn.LogSoftmax(dim=1))
 
 print(model)
 print(mt_model)
 
 #optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0, weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
+optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
+                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
 #optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
 #optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
 #optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
