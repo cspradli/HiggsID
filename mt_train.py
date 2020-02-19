@@ -51,12 +51,9 @@ dat_set = data.TensorDataset(X, Y)
 dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 
 
-
-
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
-
 
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
@@ -96,13 +93,12 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         output = model(input_var)
         with torch.no_grad():
             output1 = mt_model(mt_input)
-        
+
         output_lab = output[:sl[0]]
         output1_lab = output1[:sl[0]]
 
         loss = criterion(output_lab, torch.max(target_var, 1)[1])
         loss_mt = criterion_mse(output, output1)
-
 
        #mt_out = mt_model(input_var)
         #model_out = model(mt_input)
@@ -118,7 +114,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
 
         optimizer.zero_grad()
         loss.backward()
-        #loss_mt.backward()
+        # loss_mt.backward()
         optimizer.step()
 
         mean_teacher.update_mt(model, mt_model, ema_const, global_step)
