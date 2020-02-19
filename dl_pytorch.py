@@ -51,6 +51,8 @@ dat_set = data.TensorDataset(X, Y)
 dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 
 
+
+
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
@@ -62,9 +64,14 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
+
     ## Choose between loss criterion ##
-    criterion = nn.NLLLoss()
-    #criterion = nn.CrossEntropyLoss(size_average=False)
+    criterion_ce = nn.CrossEntropyLoss(size_avergae=False)
+    criterion = nn.NLLLoss(size_average=False)
+    criterion_mse = nn.MSELoss(size_average=False)
+    criterion_kl = nn.KLDivLoss(size_average=False)
+    criterion_l1 = nn.L1Loss(size_average=False)
+
 
     ##Running loss for output ##
     run_loss = 0
