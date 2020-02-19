@@ -56,8 +56,7 @@ dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
-global plotter2
-plotter2 = utils.VisdomLinePlotter(env_name='main')
+
 
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
