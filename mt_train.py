@@ -120,7 +120,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         optimizer.zero_grad()
         loss.backward()
         loss_vt.backward()
-        #loss_mt.backward()
+        # loss_mt.backward()
         optimizer.step()
 
         mean_teacher.update_mt(model, mt_model, ema_const, global_step)
@@ -134,8 +134,10 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     else:
         plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
         plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
-        plotter1.plot('Loss_vt', 'student_vt', 'Model Loss_vt', epoch, losses1_vt.avg)
-        plotter1.plot('Loss_vt', 'teacher_vt', 'Model Loss_vt', epoch, losses2_vt.avg)
+        plotter1.plot('Loss_vt', 'student_vt',
+                      'Model Loss_vt', epoch, losses1_vt.avg)
+        plotter1.plot('Loss_vt', 'teacher_vt',
+                      'Model Loss_vt', epoch, losses2_vt.avg)
         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
         print("Student - Epoch {} - Training loss: {}".format(e,
                                                               run_loss/len(dat_loader)))
