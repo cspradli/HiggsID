@@ -28,9 +28,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Get the data from the HDF5 files, return the feature data alongide the
 feat_arr, label_arr = dataset.get_feature_lables(
-    'Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
+    'Data/ntuple_merged_11.h5', remove_mass_PTWINDOW=False)
 test_feat, test_label = dataset.get_feature_lables(
-    'Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
+    'Data/ntuple_merged_1.h5', remove_mass_PTWINDOW=False)
 
 print(feat_arr)
 
@@ -60,7 +60,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
-
+    losses1_vt = utils.AverageMeter()
+    losses2_vt = utils.AverageMeter()
     ## Choose between loss criterion ##
     criterion_ce = nn.CrossEntropyLoss(size_average=False)
     criterion = nn.NLLLoss(size_average=False)
@@ -71,6 +72,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
+    run_loss_vt = 0
+    run_loss_mt_vt = 0
 
     consistency_criterion = loss_functions.softmax_meanse
 
@@ -97,24 +100,27 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         output_lab = output[:sl[0]]
         output1_lab = output1[:sl[0]]
 
-        loss = criterion(output_lab, torch.max(target_var, 1)[1])
-        loss_mt = criterion_mse(output, output1)
+        loss_vt = criterion(output_lab, torch.max(target_var, 1)[1])
+        loss_mt_vt = criterion_kl(output, output1)
 
-       #mt_out = mt_model(input_var)
-        #model_out = model(mt_input)
+        mt_out = mt_model(input_var)
+        model_out = model(mt_input)
 
-        #loss = criterion(model_out, torch.max(target_var, 1)[1])
-        #loss_mt = criterion(mt_out, torch.max(target_var, 1)[1])
+        loss = criterion(model_out, torch.max(target_var, 1)[1])
+        loss_mt = criterion(mt_out, torch.max(target_var, 1)[1])
 
         losses1.update(loss.data.cpu().numpy(), labels.size(0))
         losses2.update(loss_mt.data.cpu().numpy(), labels.size(0))
+        losses1_vt.update(loss.data.cpu().numpy(), labels.size(0))
+        losses2_vt.update(loss_mt.data.cpu().numpy(), labels.size(0))
         ## Get MSE loss ##
         #cl_loss = consistency_criterion(model_out, labels)
         #mt_loss = consistency_criterion(mt_out, labels)
 
         optimizer.zero_grad()
         loss.backward()
-        # loss_mt.backward()
+        loss_vt.backward()
+        #loss_mt.backward()
         optimizer.step()
 
         mean_teacher.update_mt(model, mt_model, ema_const, global_step)
@@ -122,15 +128,24 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         end = time.time()
         run_loss += loss.item()
         run_loss_mt += loss_mt.item()
+        run_loss_vt += loss.item()
+        run_loss_mt_vt += loss_mt.item()
 
     else:
         plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
         plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
+        plotter1.plot('Loss_vt', 'student_vt', 'Model Loss_vt', epoch, losses1_vt.avg)
+        plotter1.plot('Loss_vt', 'teacher_vt', 'Model Loss_vt', epoch, losses2_vt.avg)
         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
         print("Student - Epoch {} - Training loss: {}".format(e,
                                                               run_loss/len(dat_loader)))
         print("Teacher - Epoch {} - Training loss: {}".format(e,
                                                               run_loss_mt/len(dat_loader)))
+        print()
+        print("Student - Epoch {} - Training loss: {}".format(e,
+                                                              run_loss_vt/len(dat_loader)))
+        print("Teacher - Epoch {} - Training loss: {}".format(e,
+                                                              run_loss_mt_vt/len(dat_loader)))
         print()
 
 
@@ -259,14 +274,14 @@ mt_model = nn.Sequential(
     nn.Softmax(dim=1)
 )"""
 
-model = nn.Sequential(nn.Linear(27, 128),
+model = nn.Sequential(nn.Linear(23, 128),
                       nn.ReLU(),
                       nn.Linear(128, 64),
                       nn.ReLU(),
                       nn.Linear(64, 2),
                       nn.LogSoftmax(dim=1))
 
-mt_model = nn.Sequential(nn.Linear(27, 128),
+mt_model = nn.Sequential(nn.Linear(23, 128),
                          nn.ReLU(),
                          nn.Linear(128, 64),
                          nn.ReLU(),
@@ -275,6 +290,9 @@ mt_model = nn.Sequential(nn.Linear(27, 128),
 
 print(model)
 print(mt_model)
+
+for param in mt_model.parameters():
+    param.detach_()
 
 #optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
 optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
