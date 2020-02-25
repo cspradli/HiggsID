@@ -85,6 +85,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         images = images.view(images.shape[0], -1)
 
         sl = images.shape
+        minibatch_size = len(labels)
 
         input_var = images  # torch.autograd.Variable(images)
         mt_input = images  # torch.autograd.Variable(images)
@@ -97,8 +98,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         output_lab = output[:sl[0]]
         output1_lab = output1[:sl[0]]
 
-        loss = criterion(output_lab, torch.max(target_var, 1)[1])
-        loss_mt = criterion_mse(output, output1)
+        loss = criterion(output_lab, torch.max(target_var, 1)[1])/minibatch_size
+        loss_mt = criterion_mse(output, output1)/minibatch_size
 
        #mt_out = mt_model(input_var)
         #model_out = model(mt_input)
