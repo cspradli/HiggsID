@@ -50,6 +50,8 @@ numLabels = len(labels)
 
 
 def get_feature_lables(fname, remove_mass_PTWINDOW=True):
+    """ Takes in a path to a HDF5 file, returns with numpy arrays of 27 features with labels """
+    
     file = tables.open_file(fname, 'r')
     numJets = getattr(file.root, features[0]).shape[0]
     feat_arr = np.zeros((numJets, numF))
