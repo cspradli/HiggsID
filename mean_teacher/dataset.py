@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 from torch.autograd import Variable
+from sklearn.model_selection import train_test_split
 
 # 27 features to train off of
 features = ['fj_jetNTracks',
@@ -105,9 +106,9 @@ def get_labelled_data(input1, input2):
         exit(1)
 
     feat_arr, label_arr = get_feature_lables(
-        input1, remove_mass_PTWINDOW=False)
+        input1, remove_mass_PTWINDOW=True)
     test_feat, test_label = get_feature_lables(
-        input2, remove_mass_PTWINDOW=False)
+        input2, remove_mass_PTWINDOW=True)
 
     #### Convert the numpy data to a Torch-ready data type ###
     X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
@@ -130,11 +131,21 @@ def get_labelled_data(input1, input2):
 def get_unlabelled_data(input1, input2):
     """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
     PyTorch datasets """
+
+    # Check to see if data is present #
+    if not os.path.isfile(input1):
+        print("ERROR: training data not found")
+        exit(1)
+
+    if not os.path.isfile(input2):
+        print("ERROR: testing data not found")
+        exit(1)
+
     # Get the data from the HDF5 files, return the feature data alongide the
     feat_arr, label_arr = get_feature_lables(
-        input1, remove_mass_PTWINDOW=False)
+        input1, remove_mass_PTWINDOW=True)
     test_feat, test_label = get_feature_lables(
-        input2, remove_mass_PTWINDOW=False)
+        input2, remove_mass_PTWINDOW=True)
 
     #### Convert the numpy data to a Torch-ready data type ###
     X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
