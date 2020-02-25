@@ -2,6 +2,10 @@ import os.path
 import h5py
 import tables
 import numpy as np
+import torch
+import torch.utils.data as data
+from torch.autograd import Variable
+
 # 27 features to train off of
 features = ['fj_jetNTracks',
             'fj_nSV',
@@ -86,13 +90,63 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
     exit(1)"""
 
 
-# dataset = HDF5Dataset('Data/', recursive=True, load_data=False,
-#   data_cache_size=4, transform=None)
+def get_labelled_data(input1, input2):
+    """ Function to get all necessary data from the HDF5 data files, then turn them all into
+    PyTorch datasets """
+    # Get the data from the HDF5 files, return the feature data alongide the
 
-#feat_arr, label_arr = get_feature_lables('Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
-# print(feat_arr)
-# print(label_arr)
-#train_load = torch.utils.data.DataLoader(dataset=feat_arr, shuffle = True)
-# label_arr.append(feat_arr)
-#lab_ay = np.append(label_arr, feat_arr)
-# print(lab_ay)
+    if not os.path.isfile(input1):
+        print("ERROR: training data not found")
+        exit(1)
+
+    if not os.path.isfile(input2):
+        print("ERROR: testing data not found")
+        exit(1)
+
+    feat_arr, label_arr = get_feature_lables(
+        input1, remove_mass_PTWINDOW=False)
+    test_feat, test_label = get_feature_lables(
+        input2, remove_mass_PTWINDOW=False)
+
+    #### Convert the numpy data to a Torch-ready data type ###
+    X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
+    Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
+
+    testX = Variable(torch.from_numpy(test_feat).float(), requires_grad=False)
+    testY = Variable(torch.from_numpy(test_label).float(), requires_grad=False)
+
+    ### Turn all the data into a Tensor viable dataset AND dataloader for efficiency ###
+    test_set = data.TensorDataset(testX, testY)
+    test_loader = data.DataLoader(test_set, batch_size=1024, shuffle=True)
+
+    dat_set = data.TensorDataset(X, Y)
+    dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
+
+
+
+def get_unlabelled_data(input1, input2):
+    """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
+    PyTorch datasets """
+    # Get the data from the HDF5 files, return the feature data alongide the
+    feat_arr, label_arr = get_feature_lables(
+        input1, remove_mass_PTWINDOW=False)
+    test_feat, test_label = get_feature_lables(
+        input2, remove_mass_PTWINDOW=False)
+
+    #### Convert the numpy data to a Torch-ready data type ###
+    X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
+    Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
+
+    testX = Variable(torch.from_numpy(test_feat).float(), requires_grad=False)
+    testY = Variable(torch.from_numpy(test_label).float(), requires_grad=False)
+
+    ### Turn all the data into a Tensor viable dataset AND dataloader for efficiency ###
+    test_set = data.TensorDataset(testX, testY)
+    test_loader = data.DataLoader(test_set, batch_size=1024, shuffle=True)
+
+    dat_set = data.TensorDataset(X, Y)
+    dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
+
+
+
+
