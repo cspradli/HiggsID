@@ -23,10 +23,10 @@ features = ['fj_jetNTracks',
             'fj_tau_vertexEnergyRatio_0',
             'fj_tau_vertexEnergyRatio_1',
             'fj_tau_vertexMass_0',
-            #'fj_tau_vertexMass_1',
-            #'fj_trackSip2dSigAboveBottom_0',
-            #'fj_trackSip2dSigAboveBottom_1',
-            #'fj_trackSip2dSigAboveCharm_0',
+            # 'fj_tau_vertexMass_1',
+            # 'fj_trackSip2dSigAboveBottom_0',
+            # 'fj_trackSip2dSigAboveBottom_1',
+            # 'fj_trackSip2dSigAboveCharm_0',
             'fj_trackSipdSig_0',
             'fj_trackSipdSig_0_0',
             'fj_trackSipdSig_0_1',
@@ -51,7 +51,7 @@ numLabels = len(labels)
 
 def get_feature_lables(fname, remove_mass_PTWINDOW=True):
     """ Takes in a path to a HDF5 file, returns with numpy arrays of 27 features with labels """
-    
+
     file = tables.open_file(fname, 'r')
     numJets = getattr(file.root, features[0]).shape[0]
     feat_arr = np.zeros((numJets, numF))
@@ -129,7 +129,6 @@ def get_labelled_data(input1, input2):
     return dat_set, dat_loader
 
 
-
 def get_unlabelled_data(input1, input2):
     """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
     PyTorch datasets """
@@ -162,7 +161,3 @@ def get_unlabelled_data(input1, input2):
 
     dat_set = data.TensorDataset(X, Y)
     dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
-
-
-
-
