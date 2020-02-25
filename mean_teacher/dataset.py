@@ -112,6 +112,7 @@ def get_labelled_data(input1, input2):
     test_feat, test_label = get_feature_lables(
         input2, remove_mass_PTWINDOW=True)
 
+
     #### Convert the numpy data to a Torch-ready data type ###
     X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
     Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
