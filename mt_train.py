@@ -26,6 +26,7 @@ import warnings
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+"""
 # Get the data from the HDF5 files, return the feature data alongide the
 feat_arr, label_arr = dataset.get_feature_lables(
     'Data/ntuple_merged_11.h5', remove_mass_PTWINDOW=False)
@@ -49,8 +50,8 @@ test_loader = data.DataLoader(test_set, batch_size=1024, shuffle=True)
 
 dat_set = data.TensorDataset(X, Y)
 dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
-
-
+"""
+dat_set, dat_loader = dataset.get_labelled_data('Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')

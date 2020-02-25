@@ -123,6 +123,8 @@ def get_labelled_data(input1, input2):
     dat_set = data.TensorDataset(X, Y)
     dat_loader = data.DataLoader(dat_set, batch_size=64, shuffle=True)
 
+    return dat_set, dat_loader
+
 
 
 def get_unlabelled_data(input1, input2):
