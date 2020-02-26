@@ -31,15 +31,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 args = args_util.get_args()
 
+#Debug printing#
 print(args.epochs)
-
 print(args.batch_size)
-
 print(args.num_labeled)
 
+# Import data from specified location #
+dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
+    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
 
-#dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
-#    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
