@@ -37,7 +37,8 @@ print(args.batch_size)
 print(args.num_labeled)
 
 
-dat_set, dat_loader = dataset.get_labelled_data('Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
+dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
+    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
@@ -290,7 +291,7 @@ optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
 #optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
 #optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
 #optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
-epochs = 50
+epochs = args.epochs
 
 for e in range(epochs):
     start_time = time.time()
