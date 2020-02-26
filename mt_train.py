@@ -19,17 +19,11 @@ from mean_teacher import dataset
 from mean_teacher import loss_functions
 from mean_teacher import mean_teacher
 from mean_teacher import model_arch
-
-import mean_teacher
-
-
 import args_util
-
-
 import warnings
+
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 args = args_util.get_args()
 
 #Debug printing#
@@ -44,6 +38,43 @@ dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
+
+"""Use this data until figure out other data problem"""
+transform = transforms.Compose([transforms.ToTensor(),
+                                transforms.Normalize((0.5,), (0.5,)),
+                                AddGaussianNoise(0., 1.)
+                                ])
+
+### Input sizes to be used for the models ###
+input_size = 27
+hidden_sizes = [256, 128, 64, 64, 64, 32]
+output_size = 2
+global_step = 0
+
+
+#Creat nn from model architectures in mean teacher#
+model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+
+print(model)
+print(mt_model)
+
+for param in mt_model.parameters():
+    param.detach_()
+
+#optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
+optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
+                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
+#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
+#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
+epochs = args.epochs
+
+for e in range(epochs):
+    start_time = time.time()
+    running_loss = 0
+    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
+    test(device, model, mt_model, test_loader, e)
 
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
@@ -203,90 +234,3 @@ def test(device, model, mt_model, test_loader, epoch):
                       'Model Accuracy', epoch, accuracy1)
         plotter1.plot('Accuracy', 'Teacher Validation',
                       'Model Accuracy', epoch, accuracy2)
-
-
-"""Use this data until figure out other data problem"""
-transform = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize((0.5,), (0.5,)),
-                                AddGaussianNoise(0., 1.)
-                                ])
-
-"""
-trainset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
-valset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
-valloader = torch.utils.data.DataLoader(valset, batch_size=64, shuffle=True)
-"""
-"""model = nn.Sequential(
-    nn.Linear(input_size, hidden_sizes[0]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[0], hidden_sizes[1]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[1], hidden_sizes[2]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[2], hidden_sizes[3]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[3], hidden_sizes[4]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[4], output_size),
-    nn.Softmax(dim=1)
-)"""
-### Input sizes to be used for the models ###
-input_size = 27
-hidden_sizes = [256, 128, 64, 64, 64, 32]
-output_size = 2
-global_step = 0
-"""
-model = nn.Sequential(
-    nn.Linear(input_size, hidden_sizes[0]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[0], hidden_sizes[1]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[1], hidden_sizes[2]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[2], hidden_sizes[3]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[3], hidden_sizes[4]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[4], output_size),
-    nn.Softmax(dim=1)
-)
-
-mt_model = nn.Sequential(
-    nn.Linear(input_size, hidden_sizes[0]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[0], hidden_sizes[1]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[1], hidden_sizes[2]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[2], hidden_sizes[3]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[3], hidden_sizes[4]),
-    nn.ReLU(),
-    nn.Linear(hidden_sizes[4], output_size),
-    nn.Softmax(dim=1)
-)"""
-
-#Creat nn from model architectures in mean teacher#
-model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
-mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
-
-print(model)
-print(mt_model)
-
-for param in mt_model.parameters():
-    param.detach_()
-
-#optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
-                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
-#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
-#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
-#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
-epochs = args.epochs
-
-for e in range(epochs):
-    start_time = time.time()
-    running_loss = 0
-    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
-    test(device, model, mt_model, test_loader, e)
