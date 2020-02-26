@@ -1,20 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
+#import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
-import torchvision.datasets as datasets
+#import torchvision.datasets as datasets
 from torch.autograd import Variable
 
 import utils
 import time
 import numpy as np
-import tables
-from sklearn.metrics import roc_curve, auc
-import matplotlib.pyplot as plt
 import os.path
 
 from mean_teacher.mean_teacher import AddGaussianNoise
@@ -22,6 +19,10 @@ from mean_teacher import dataset
 from mean_teacher import loss_functions
 from mean_teacher import mean_teacher
 from mean_teacher import model_arch
+
+import mean_teacher
+
+
 import args_util
 
 
