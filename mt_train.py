@@ -21,6 +21,7 @@ from mean_teacher.mean_teacher import AddGaussianNoise
 from mean_teacher import dataset
 from mean_teacher import loss_functions
 from mean_teacher import mean_teacher
+from mean_teacher import model_arch
 import args_util
 
 
@@ -37,8 +38,8 @@ print(args.batch_size)
 print(args.num_labeled)
 
 
-dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
-    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
+#dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
+#    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
 # Get visdom ready to go #
 global plotter1
 plotter1 = utils.VisdomLinePlotter(env_name='main')
@@ -265,19 +266,9 @@ mt_model = nn.Sequential(
     nn.Softmax(dim=1)
 )"""
 
-model = nn.Sequential(nn.Linear(23, 128),
-                      nn.ReLU(),
-                      nn.Linear(128, 64),
-                      nn.ReLU(),
-                      nn.Linear(64, 2),
-                      nn.LogSoftmax(dim=1))
-
-mt_model = nn.Sequential(nn.Linear(23, 128),
-                         nn.ReLU(),
-                         nn.Linear(128, 64),
-                         nn.ReLU(),
-                         nn.Linear(64, 2),
-                         nn.LogSoftmax(dim=1))
+#Creat nn from model architectures in mean teacher#
+model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
 
 print(model)
 print(mt_model)
