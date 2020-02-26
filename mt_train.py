@@ -21,10 +21,20 @@ from mean_teacher.mean_teacher import AddGaussianNoise
 from mean_teacher import dataset
 from mean_teacher import loss_functions
 from mean_teacher import mean_teacher
+import args_util
+
 
 import warnings
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+args = args_util.get_args()
+
+print(args.epochs)
+
+print(args.batch_size)
+
+print(args.num_labeled)
 
 
 dat_set, dat_loader = dataset.get_labelled_data('Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
