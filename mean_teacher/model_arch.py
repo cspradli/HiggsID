@@ -22,15 +22,19 @@ def seq_model(input, layer_arr, output, dimen):
                         )
 
 
-def creat_seq_model(input_arr1, input_arr2):
+def creat_seq_model(ema=False):
     """Create a basic neural network with predetermined sizes """
-    model = nn.Sequential(nn.Linear(23, 128),
+    model = nn.Sequential(nn.Linear(27, 128),
                       nn.ReLU(),
                       nn.Linear(128, 64),
                       nn.ReLU(),
                       nn.Linear(64, 2),
                       nn.LogSoftmax(dim=1))
 
+    if ema:
+        for param in model.parameters():
+            param.detach_()
+            
     return model
     
 

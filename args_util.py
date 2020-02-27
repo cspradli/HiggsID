@@ -10,7 +10,7 @@ def get_args():
     parser.add_argument('--batch_size', default=1024, type=int,
                         metavar='N', help='training batch size')
 
-    parser.add_argument('--num_labeled', type=int, default=250,
+    parser.add_argument('--percent_unlabeled', type=float, default=1.0,
                         help='Number of labeled data to have')
 
     args = parser.parse_args()

@@ -27,7 +27,7 @@ args = args_util.get_args()
 #Debug printing#
 print(args.epochs)
 print(args.batch_size)
-print(args.num_labeled)
+print(args.percent_unlabeled)
 
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
@@ -51,11 +51,16 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
 
     consistency_criterion = loss_functions.softmax_meanse
 
+    # calculate the amount of unlabelled #
+    #num_unlabelled = len(dat_loader) - (args.percent_labeled * len(dat_loader))
+
     ## Set both models to training mode ##
     model.train()
     mt_model.train()
 
     for i, (images, labels) in enumerate(dat_loader):
+        
+
 
         global_step += 1
 
@@ -71,20 +76,26 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         mt_input = Variable(images)
         target_var = Variable(labels)
 
+        ## Compute guessed labels for unlabelled##
+        with torch.no_grad():
+            outputs_u = mt_model(mt_input)
+            outputs_u2 = mt_model(input_var)
+            p = (torch.softmax(outputs_u, dim=1) + torch.softmax(outputs_u2, dim=1)) / 2
+            pt = p**(1/0.5)
+            targets_u = pt / pt.sum(dim=1, keepdim=True)
+            targets_u = targets_u.detach()
+
+        
         
         output = model(input_var)
-        with torch.no_grad():
-            output1 = mt_model(mt_input)
 
-        
-        output1 = Variable(output1.detach().data, requires_grad=False)
 
         output_lab = output[:sl[0]]
-        output1_lab = output1[:sl[0]]
+        #output1_lab = output1[:sl[0]]
 
         loss_vt = criterion(output_lab, torch.max(target_var, 1)[1]) / minibatch_size
-        loss_mt_vt = criterion_kl(output, output1) / minibatch_size
-        print(loss_mt_vt)
+        loss_mt_vt = criterion_kl(output, targets_u) / minibatch_size
+        #print(loss_mt_vt)
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
 
@@ -200,6 +211,11 @@ def test(device, model, mt_model, test_loader, epoch):
 dat_set, dat_loader = dataset.get_labelled_data(
     'Data/ntuple_merged_11.h5')
 
+#dat_loader, unlabeled_loader = dataset.get_unlabelled_data(
+#    'Data/ntuple_merged_11.h5', args.percent_unlabeled)
+
+
+
 test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
 
 # Get visdom ready to go #
@@ -220,8 +236,8 @@ global_step = 0
 
 
 #Creat nn from model architectures in mean teacher#
-model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
-mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+model = model_arch.creat_seq_model()
+mt_model = model_arch.creat_seq_model(ema=True)
 
 """
 odel = nn.Sequential(nn.Linear(23, 128),
@@ -242,19 +258,18 @@ mt_model = nn.Sequential(nn.Linear(23, 128),
 print(model)
 print(mt_model)
 
-for param in mt_model.parameters():
-    param.detach_()
+
 
 #optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
-                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
+#optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
+#                         weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
 #optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
-#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
 #optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
 epochs = args.epochs
 
 for e in range(epochs):
     start_time = time.time()
     running_loss = 0
-    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
+    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.90)
     test(device, model, mt_model, test_loader, e)
