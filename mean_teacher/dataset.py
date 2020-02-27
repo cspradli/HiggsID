@@ -89,12 +89,8 @@ def get_feature_lables(fname, remove_mass_PTWINDOW=True):
     return feat_arr, lab_arr
 
 
-"""if not os.path.isfile('Data/ntuple_merged_10.h5'):
-    print("ERROR: data not found")
-    exit(1)"""
 
-
-def get_labelled_data(input1, input2):
+def get_labelled_data(input1):
     """ Function to get all necessary data from the HDF5 data files, then turn them all into
     PyTorch datasets """
     # Get the data from the HDF5 files, return the feature data alongide the
@@ -103,19 +99,33 @@ def get_labelled_data(input1, input2):
         print("ERROR: training data not found")
         exit(1)
 
+    feat_arr, label_arr = get_feature_lables(
+        input1, remove_mass_PTWINDOW=False)
+
+    print(feat_arr.shape)
+    print(label_arr.shape)
+    #### Convert the numpy data to a Torch-ready data type ###
+    X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
+    Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
+
+    dat_set = data.TensorDataset(X, Y)
+    dat_loader = data.DataLoader(dat_set, batch_size=1024, shuffle=True)
+
+    return dat_set, dat_loader
+
+
+
+def get_test_data(input2):
+    """ Function to get all necessary data from the HDF5 data files, then turn them all into
+    PyTorch datasets """
+    # Get the data from the HDF5 files, return the feature data alongide the
+
     if not os.path.isfile(input2):
         print("ERROR: testing data not found")
         exit(1)
 
-    feat_arr, label_arr = get_feature_lables(
-        input1, remove_mass_PTWINDOW=True)
     test_feat, test_label = get_feature_lables(
-        input2, remove_mass_PTWINDOW=True)
-
-
-    #### Convert the numpy data to a Torch-ready data type ###
-    X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
-    Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
+        input2, remove_mass_PTWINDOW=False)
 
     testX = Variable(torch.from_numpy(test_feat).float(), requires_grad=False)
     testY = Variable(torch.from_numpy(test_label).float(), requires_grad=False)
@@ -124,10 +134,8 @@ def get_labelled_data(input1, input2):
     test_set = data.TensorDataset(testX, testY)
     test_loader = data.DataLoader(test_set, batch_size=64, shuffle=True)
 
-    dat_set = data.TensorDataset(X, Y)
-    dat_loader = data.DataLoader(dat_set, batch_size=1024, shuffle=True)
 
-    return dat_set, dat_loader, test_set, test_loader
+    return test_set, test_loader
 
 
 def get_unlabelled_data(input1):

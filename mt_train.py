@@ -29,51 +29,6 @@ print(args.epochs)
 print(args.batch_size)
 print(args.num_labeled)
 
-# Import data from specified location #
-dat_set, dat_loader, test_set, test_loader = dataset.get_labelled_data(
-    'Data/ntuple_merged_11.h5', 'Data/ntuple_merged_1.h5')
-
-# Get visdom ready to go #
-global plotter1
-plotter1 = utils.VisdomLinePlotter(env_name='main')
-
-"""Use this data until figure out other data problem"""
-transform = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize((0.5,), (0.5,)),
-                                AddGaussianNoise(0., 1.)
-                                ])
-
-### Input sizes to be used for the models ###
-input_size = 27
-hidden_sizes = [256, 128, 64, 64, 64, 32]
-output_size = 2
-global_step = 0
-
-
-#Creat nn from model architectures in mean teacher#
-model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
-mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
-
-print(model)
-print(mt_model)
-
-for param in mt_model.parameters():
-    param.detach_()
-
-#optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
-optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
-                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
-#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
-#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
-#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
-epochs = args.epochs
-
-for e in range(epochs):
-    start_time = time.time()
-    running_loss = 0
-    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
-    test(device, model, mt_model, test_loader, e)
-
 
 def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
@@ -87,7 +42,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     criterion_mse = nn.MSELoss(size_average=False)
     criterion_kl = nn.KLDivLoss(size_average=False)
     criterion_l1 = nn.L1Loss(size_average=False)
-
+    
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -100,7 +55,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     model.train()
     mt_model.train()
 
-    for images, labels in dat_loader:
+    for i, (images, labels) in enumerate(dat_loader):
 
         global_step += 1
 
@@ -109,30 +64,37 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         sl = images.shape
         minibatch_size = len(labels)
 
-        input_var = images  # torch.autograd.Variable(images)
-        mt_input = images  # torch.autograd.Variable(images)
-        target_var = labels  # torch.autograd.Variable(labels)
+        #input_var = images  # torch.autograd.Variable(images)
+        #mt_input = images  # torch.autograd.Variable(images)
+        #target_var = labels  # torch.autograd.Variable(labels)
+        input_var = Variable(images)
+        mt_input = Variable(images)
+        target_var = Variable(labels)
 
+        
         output = model(input_var)
         with torch.no_grad():
             output1 = mt_model(mt_input)
 
+        
+        output1 = Variable(output1.detach().data, requires_grad=False)
+
         output_lab = output[:sl[0]]
         output1_lab = output1[:sl[0]]
 
-        loss_vt = criterion(output_lab, torch.max(target_var, 1)[1])
-        loss_mt_vt = criterion_kl(output, output1)
-
+        loss_vt = criterion(output_lab, torch.max(target_var, 1)[1]) / minibatch_size
+        loss_mt_vt = criterion_kl(output, output1) / minibatch_size
+        print(loss_mt_vt)
         mt_out = mt_model(input_var)
         model_out = model(mt_input)
 
-        loss = criterion(model_out, torch.max(target_var, 1)[1])
-        loss_mt = criterion(mt_out, torch.max(target_var, 1)[1])
-
+        loss = criterion(model_out, torch.max(target_var, 1)[1]) / minibatch_size
+        loss_mt = criterion(mt_out, torch.max(target_var, 1)[1]) /minibatch_size
+        #print(loss.item())
         losses1.update(loss.data.cpu().numpy(), labels.size(0))
         losses2.update(loss_mt.data.cpu().numpy(), labels.size(0))
-        losses1_vt.update(loss.data.cpu().numpy(), labels.size(0))
-        losses2_vt.update(loss_mt.data.cpu().numpy(), labels.size(0))
+        losses1_vt.update(loss_vt.data.cpu().numpy(), labels.size(0))
+        losses2_vt.update(loss_mt_vt.data.cpu().numpy(), labels.size(0))
         ## Get MSE loss ##
         #cl_loss = consistency_criterion(model_out, labels)
         #mt_loss = consistency_criterion(mt_out, labels)
@@ -140,7 +102,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         optimizer.zero_grad()
         loss.backward()
         loss_vt.backward()
-        # loss_mt.backward()
+        #loss_mt.backward()
         optimizer.step()
 
         mean_teacher.update_mt(model, mt_model, ema_const, global_step)
@@ -148,8 +110,8 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         end = time.time()
         run_loss += loss.item()
         run_loss_mt += loss_mt.item()
-        run_loss_vt += loss.item()
-        run_loss_mt_vt += loss_mt.item()
+        run_loss_vt += loss_vt.item()
+        run_loss_mt_vt += loss_mt_vt.item()
 
     else:
         plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
@@ -232,3 +194,67 @@ def test(device, model, mt_model, test_loader, epoch):
                       'Model Accuracy', epoch, accuracy1)
         plotter1.plot('Accuracy', 'Teacher Validation',
                       'Model Accuracy', epoch, accuracy2)
+
+
+# Import data from specified location #
+dat_set, dat_loader = dataset.get_labelled_data(
+    'Data/ntuple_merged_11.h5')
+
+test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
+
+# Get visdom ready to go #
+global plotter1
+plotter1 = utils.VisdomLinePlotter(env_name='main')
+
+"""Use this data until figure out other data problem"""
+transform = transforms.Compose([transforms.ToTensor(),
+                                transforms.Normalize((0.5,), (0.5,)),
+                                AddGaussianNoise(0., 1.)
+                                ])
+
+### Input sizes to be used for the models ###
+input_size = 27
+hidden_sizes = [256, 128, 64, 64, 64, 32]
+output_size = 2
+global_step = 0
+
+
+#Creat nn from model architectures in mean teacher#
+model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+mt_model = model_arch.creat_seq_model(hidden_sizes, hidden_sizes)
+
+"""
+odel = nn.Sequential(nn.Linear(23, 128),
+                      nn.ReLU(),
+                      nn.Linear(128, 64),
+                      nn.ReLU(),
+                      nn.Linear(64, 2),
+                      nn.LogSoftmax(dim=1))
+
+mt_model = nn.Sequential(nn.Linear(23, 128),
+                      nn.ReLU(),
+                      nn.Linear(128, 64),
+                      nn.ReLU(),
+                      nn.Linear(64, 2),
+                      nn.LogSoftmax(dim=1))
+"""
+
+print(model)
+print(mt_model)
+
+for param in mt_model.parameters():
+    param.detach_()
+
+#optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
+optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
+                          weight_decay=0.01, initial_accumulator_value=0, eps=1e-10)
+#optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
+#optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+#optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
+epochs = args.epochs
+
+for e in range(epochs):
+    start_time = time.time()
+    running_loss = 0
+    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.95)
+    test(device, model, mt_model, test_loader, e)
