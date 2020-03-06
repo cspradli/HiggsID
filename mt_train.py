@@ -220,7 +220,7 @@ test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
 
 # Get visdom ready to go #
 global plotter1
-plotter1 = utils.VisdomLinePlotter(env_name='main')
+plotter1 = utils.VisdomLinePlotter(env_name=args.env)
 
 """Use this data until figure out other data problem"""
 transform = transforms.Compose([transforms.ToTensor(),
@@ -235,9 +235,16 @@ output_size = 2
 global_step = 0
 
 
+nnet_arch0 = [512, 512, 256, 256, 128, 128]
+nnet_arch1 = [256, 256, 256, 256, 256, 256]
+nnet_arch2 = [256, 512, 512, 256, 256, 128]
+nnet_arch3 = [512, 512, 512, 512, 256, 128]
+
+nnet_arches = [nnet_arch0, nnet_arch1, nnet_arch2, nnet_arch3]
+
 #Creat nn from model architectures in mean teacher#
-model = model_arch.creat_seq_model()
-mt_model = model_arch.creat_seq_model(ema=True)
+model = model_arch.seq_model(input_size, nnet_arches[args.arch], output_size, 1, False)
+mt_model = model_arch.seq_model(input_size, nnet_arches[args.arch], output_size, 1, True)
 
 """
 odel = nn.Sequential(nn.Linear(23, 128),

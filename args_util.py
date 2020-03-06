@@ -13,6 +13,12 @@ def get_args():
     parser.add_argument('--percent_unlabeled', type=float, default=1.0,
                         help='Number of labeled data to have')
 
+    parser.add_argument('--arch', type=int, default=0,
+                        help='Which arch to use')
+    
+    parser.add_argument('--env', type=string, default="main",
+                        help='Which env to use')
+
     args = parser.parse_args()
 
     return args
