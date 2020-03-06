@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument('--arch', type=int, default=0,
                         help='Which arch to use')
     
-    parser.add_argument('--env', type=string, default="main",
+    parser.add_argument('--env', type=int, default="1",
                         help='Which env to use')
 
     args = parser.parse_args()

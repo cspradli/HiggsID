@@ -213,14 +213,19 @@ dat_set, dat_loader = dataset.get_labelled_data(
 
 #dat_loader, unlabeled_loader = dataset.get_unlabelled_data(
 #    'Data/ntuple_merged_11.h5', args.percent_unlabeled)
+envs0 = "Test 1"
+envs1 = "Test 2"
+envs2 = "Test 3"
+envs3 = "Test 4"
 
+environments = [envs0, envs1, envs2, envs3]
 
 
 test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
 
 # Get visdom ready to go #
 global plotter1
-plotter1 = utils.VisdomLinePlotter(env_name=args.env)
+plotter1 = utils.VisdomLinePlotter(env_name=environments[args.env])
 
 """Use this data until figure out other data problem"""
 transform = transforms.Compose([transforms.ToTensor(),
@@ -241,6 +246,8 @@ nnet_arch2 = [256, 512, 512, 256, 256, 128]
 nnet_arch3 = [512, 512, 512, 512, 256, 128]
 
 nnet_arches = [nnet_arch0, nnet_arch1, nnet_arch2, nnet_arch3]
+
+
 
 #Creat nn from model architectures in mean teacher#
 model = model_arch.seq_model(input_size, nnet_arches[args.arch], output_size, 1, False)
