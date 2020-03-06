@@ -132,6 +132,7 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         plotter1.plot('Loss_vt', 'teacher_vt',
                       'Model Loss_vt', epoch, losses2_vt.avg)
         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
+        print("Time - {}".format((start_time-end)))
         print("Student - Epoch {} - Training loss: {}".format(e,
                                                               run_loss/len(dat_loader)))
         print("Teacher - Epoch {} - Training loss: {}".format(e,

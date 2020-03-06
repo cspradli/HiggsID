@@ -28,9 +28,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Get the data from the HDF5 files, return the feature data alongide the
 feat_arr, label_arr = dataset.get_feature_lables(
-    'Data/ntuple_merged_10.h5', remove_mass_PTWINDOW=False)
+    'Data/ntuple_merged_11.h5', remove_mass_PTWINDOW=False)
 test_feat, test_label = dataset.get_feature_lables(
-    'Data/ntuple_merged_0.h5', remove_mass_PTWINDOW=False)
+    'Data/ntuple_merged_1.h5', remove_mass_PTWINDOW=False)
 
 print(feat_arr)
 
