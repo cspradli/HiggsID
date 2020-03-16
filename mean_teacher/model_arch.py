@@ -42,9 +42,9 @@ def seq_model_6(input, layer_arr, output, dimen, ema=False):
                         nn.ReLU(),
                         nn.Linear(layer_arr[4], layer_arr[5]),
                         nn.ReLU(),
-                        nn.Linear(layer_arr[5], layer_arr[6]),
+                        nn.Linear(layer_arr[4], layer_arr[5]),
                         nn.ReLU(),
-                        nn.Linear(layer_arr[6], output),
+                        nn.Linear(layer_arr[5], output),
                         nn.LogSoftmax(dim=dimen)
                         )
 
