@@ -30,7 +30,7 @@ print(args.batch_size)
 print(args.percent_unlabeled)
 
 
-def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
+def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
@@ -57,15 +57,30 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     ## Set both models to training mode ##
     model.train()
     mt_model.train()
+    
 
-    for i, (images, labels) in enumerate(dat_loader):
+    enum_Xloader = iter(train_loader)
+    enum_Uloader = iter(unlabeled_loader)
+
+    for i in range(1024):
+
+        ## Try to get all the next datasets in range of the batch_size
+        try:
+            (images, labels) = enum_Xloader.next()
+        except:
+            enum_Xloader = iter(train_loader)
+            (images, labels) = enum_Xloader.next()
+
+        try:
+            (uX, _) = enum_Uloader.next()
+        except:
+            enum_Uloader = iter(unlabeled_loader)
+            (uX, _) = enum_Uloader.next()
         
-
-
         global_step += 1
 
         images = images.view(images.shape[0], -1)
-
+        
         sl = images.shape
         minibatch_size = len(labels)
 
@@ -79,14 +94,13 @@ def train(train_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
         ## Compute guessed labels for unlabelled##
         with torch.no_grad():
             outputs_u = mt_model(mt_input)
-            outputs_u2 = mt_model(input_var)
-            p = (torch.softmax(outputs_u, dim=1) + torch.softmax(outputs_u2, dim=1)) / 2
+            p = (torch.softmax(outputs_u, dim=1))
             pt = p**(1/0.5)
             targets_u = pt / pt.sum(dim=1, keepdim=True)
             targets_u = targets_u.detach()
 
         
-        
+        print(targets_u.shape)
         output = model(input_var)
 
 
@@ -209,8 +223,11 @@ def test(device, model, mt_model, test_loader, epoch):
 
 
 # Import data from specified location #
-dat_set, dat_loader = dataset.get_labelled_data(
+"""dat_set, dat_loader = dataset.get_labelled_data(
     'Data/ntuple_merged_11.h5')
+"""
+# Get all labeled and unlabeled in one function #
+label_loader, unlabel_loader = dataset.get_unlabelled_data('Data/ntuple_merged_11.h5', 250)
 
 #dat_loader, unlabeled_loader = dataset.get_unlabelled_data(
 #    'Data/ntuple_merged_11.h5', args.percent_unlabeled)
@@ -235,10 +252,21 @@ hidden_sizes = [256, 128, 64, 64, 64, 32]
 output_size = 2
 global_step = 0
 
+input_nodes5_1 = [256, 256, 256, 256, 256, 256]
+input_nodes5_2 = [256, 256, 512, 512, 256, 128]
+input_nodes5_3 = [512, 512, 512, 512, 512, 512]
+
+input_nodes6_1 = [256, 256, 256, 256, 256, 256, 128]
+input_nodes6_2 = [256, 256, 512, 512, 512, 256, 128]
+input_nodes6_3 = [512, 512, 512, 512, 512, 512, 512]
+
+#Create from arrays
+model = model_arch.seq_model_5(input_size, input_nodes5_1, output_size, 1, ema=False)
+mt_model = model_arch.seq_model_5(input_size, input_nodes5_1, output_size, 1, ema=True)
 
 #Creat nn from model architectures in mean teacher#
-model = model_arch.creat_seq_model()
-mt_model = model_arch.creat_seq_model(ema=True)
+#model = model_arch.creat_seq_model()
+#mt_model = model_arch.creat_seq_model(ema=True)
 
 """
 odel = nn.Sequential(nn.Linear(23, 128),
@@ -272,5 +300,5 @@ epochs = args.epochs
 for e in range(epochs):
     start_time = time.time()
     running_loss = 0
-    train(dat_loader, model, mt_model, optimizer, e, ema_const=0.90)
+    train(label_loader, unlabel_loader, model, mt_model, optimizer, e, ema_const=0.90)
     test(device, model, mt_model, test_loader, e)

@@ -104,6 +104,7 @@ def get_labelled_data(input1):
 
     print(feat_arr.shape)
     print(label_arr.shape)
+
     #### Convert the numpy data to a Torch-ready data type ###
     X = Variable(torch.from_numpy(feat_arr).float(), requires_grad=False)
     Y = Variable(torch.from_numpy(label_arr).float(), requires_grad=False)
@@ -138,7 +139,7 @@ def get_test_data(input2):
     return test_set, test_loader
 
 
-def get_unlabelled_data(input1, percent):
+def get_unlabelled_data(input1, amount_l):
     """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
     PyTorch datasets """
 
@@ -150,24 +151,29 @@ def get_unlabelled_data(input1, percent):
     
 
     # Get the data from the HDF5 files, return the feature data alongide the
-    feat_arr, label_arr = get_feature_lables(
+    x_features, y_labels = get_feature_lables(
         input1, remove_mass_PTWINDOW=True)
-    
-    train_x, train_y, u_x, u_y = train_test_split(feat_arr, label_arr, test_size=percent)
-    
+    print(x_features.shape)
+    print(y_labels.shape)
+
     #u_y = np.zeros(u_y.shape)
+    #uX = Variable(torch.from_numpy(u_x).float(), requires_grad=False)
+    #uY = Variable(torch.from_numpy(u_y).float(), requires_grad=False)
 
-    uX = Variable(torch.from_numpy(u_x).float(), requires_grad=False)
-    uY = Variable(torch.from_numpy(u_y).float(), requires_grad=False)
-
-    u_set = data.TensorDataset(uX, uY)
-    u_loader = data.DataLoader(u_set, batch_size=512, shuffle=True)
+    #u_set = data.TensorDataset(uX, uY)
+    #u_loader = data.DataLoader(u_set, batch_size=1024, shuffle=True)
 
     #### Convert the numpy data to a Torch-ready data type ###
-    X = Variable(torch.from_numpy(train_x).float(), requires_grad=False)
-    Y = Variable(torch.from_numpy(train_y).float(), requires_grad=False)
+    X = Variable(torch.from_numpy(x_features).float(), requires_grad=False)
+    Y = Variable(torch.from_numpy(y_labels).float(), requires_grad=False)
 
+    # The Master dataset #
     dat_set = data.TensorDataset(X, Y)
-    dat_loader = data.DataLoader(dat_set, batch_size=1024, shuffle=True)
 
-    return dat_loader, u_loader
+    # Seperate out the labeled from unlabeled via a random split given amount of labeled data we need #
+    label_set, unlabel_set = data.random_split(dat_set, [amount_l, (len(dat_set)-amount_l)])
+    label_loader = data.DataLoader(label_set, batch_size=1024, shuffle=True)
+    unlabel_loader = data.DataLoader(unlabel_set, batch_size=1024, shuffle=True)
+
+    return label_loader, unlabel_loader
+
