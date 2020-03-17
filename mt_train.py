@@ -65,16 +65,17 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
 
     enum_Xloader = iter(train_loader)
     enum_Uloader = iter(unlabeled_loader)
-
-    for i in range(args.val_iteration):
+    #print(enum_Xloader.shape())
+    for i in range(args.batch_size):
 
         ## Try to get all the next datasets in range of the batch_size
         try:
-            (images, labels) = enum_Xloader.next()
-        except:
-            #print("ERROR: Exception 1")
+            images, labels = next(enum_Xloader)
+        except StopIteration:
+            print("ERROR: Exception 1")
             enum_Xloader = iter(train_loader)
-            images, labels = enum_Xloader.next()
+            images, labels = next(enum_Xloader)
+
 
         try:
             (uX, _) = enum_Uloader.next()
@@ -86,7 +87,7 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
         global_step += 1
 
         images = images.view(images.shape[0], -1)
-
+        #batch_size = images.size(0)
         sl = images.shape
         minibatch_size = len(labels)
 
@@ -246,6 +247,8 @@ environments = [envs0, envs1, envs2, envs3]
 
 
 test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
+
+dataset.get_data('Data/ntuple_merged_11.h5', 250)
 
 # Get visdom ready to go #
 global plotter1

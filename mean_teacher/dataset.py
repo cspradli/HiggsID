@@ -175,6 +175,59 @@ def get_unlabelled_data(input1, amount_l):
     label_set, unlabel_set = data.random_split(dat_set, [amount_l, (len(dat_set)-amount_l)])
     label_loader = data.DataLoader(label_set, args.batch_size, shuffle=True, drop_last=True)
     unlabel_loader = data.DataLoader(unlabel_set, args.batch_size, shuffle=True, drop_last=True)
-
+    print(label_set)
     return label_loader, unlabel_loader
+
+def split(labels, n_label):
+    labels = np.array(labels)
+    train_lab = []
+    train_ul = []
+    val_idxs = []
+
+    for i in range(2):
+        idxs = np.where(labels == i)[0]
+        np.random.shuffle(idxs)
+        train_lab.extend(idxs[:n_label])
+        train_ul.extend(idxs[n_label:-500])
+        val_idxs,extend(idxs[-500:])
+    np.random.shuffle(train_lab)
+    np.random.shuffle(train_ul)
+    np.random.shuffle(val_idxs)
+
+    return train_lab, train_ul, val_idxs
+
+def data_gen(root, num_labeled):
+    """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
+    PyTorch datasets """
+
+    # Check to see if data is present #
+    if not os.path.isfile(input1):
+        print("ERROR: training data not found")
+        exit(1)
+
+    
+
+    # Get the data from the HDF5 files, return the feature data alongide the
+    x_features, y_labels = get_feature_lables(
+        input1, remove_mass_PTWINDOW=True)
+    print(x_features.shape)
+    print(y_labels.shape)
+
+    #u_y = np.zeros(u_y.shape)
+    #uX = Variable(torch.from_numpy(u_x).float(), requires_grad=False)
+    #uY = Variable(torch.from_numpy(u_y).float(), requires_grad=False)
+
+    #u_set = data.TensorDataset(uX, uY)
+    #u_loader = data.DataLoader(u_set, batch_size=1024, shuffle=True)
+
+    #### Convert the numpy data to a Torch-ready data type ###
+    X = Variable(torch.from_numpy(x_features).float(), requires_grad=False)
+    Y = Variable(torch.from_numpy(y_labels).float(), requires_grad=False)
+    
+    # The Master dataset #
+    dat_set = data.TensorDataset(X, Y)
+
+    train_lab, train_ul, val_idxs = split(dat_set.targets, int(n_labeled/2))
+
+
 
