@@ -7,7 +7,8 @@ import torch
 import torch.utils.data as data
 from torch.autograd import Variable
 from sklearn.model_selection import train_test_split
-
+import args_util
+args = args_util.get_args()
 # 27 features to train off of
 features = ['fj_jetNTracks',
             'fj_nSV',
@@ -172,8 +173,8 @@ def get_unlabelled_data(input1, amount_l):
 
     # Seperate out the labeled from unlabeled via a random split given amount of labeled data we need #
     label_set, unlabel_set = data.random_split(dat_set, [amount_l, (len(dat_set)-amount_l)])
-    label_loader = data.DataLoader(label_set, batch_size=1024, shuffle=True)
-    unlabel_loader = data.DataLoader(unlabel_set, batch_size=1024, shuffle=True)
+    label_loader = data.DataLoader(label_set, args.batch_size, shuffle=True, drop_last=True)
+    unlabel_loader = data.DataLoader(unlabel_set, args.batch_size, shuffle=True, drop_last=True)
 
     return label_loader, unlabel_loader
 

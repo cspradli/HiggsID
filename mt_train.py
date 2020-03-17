@@ -20,6 +20,9 @@ from mean_teacher import model_arch
 import args_util
 import warnings
 
+#testing here
+#roger testing here
+
 warnings.simplefilter("ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 args = args_util.get_args()
@@ -42,7 +45,7 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
     criterion_mse = nn.MSELoss(size_average=False)
     criterion_kl = nn.KLDivLoss(size_average=False)
     criterion_l1 = nn.L1Loss(size_average=False)
-    
+
     ##Running loss for output ##
     run_loss = 0
     run_loss_mt = 0
@@ -51,36 +54,39 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
 
     consistency_criterion = loss_functions.softmax_meanse
 
+
     # calculate the amount of unlabelled #
     #num_unlabelled = len(dat_loader) - (args.percent_labeled * len(dat_loader))
 
     ## Set both models to training mode ##
     model.train()
     mt_model.train()
-    
+
 
     enum_Xloader = iter(train_loader)
     enum_Uloader = iter(unlabeled_loader)
 
-    for i in range(1024):
+    for i in range(args.val_iteration):
 
         ## Try to get all the next datasets in range of the batch_size
         try:
             (images, labels) = enum_Xloader.next()
         except:
+            #print("ERROR: Exception 1")
             enum_Xloader = iter(train_loader)
-            (images, labels) = enum_Xloader.next()
+            images, labels = enum_Xloader.next()
 
         try:
             (uX, _) = enum_Uloader.next()
         except:
+            #print("ERROR: exception 2")
             enum_Uloader = iter(unlabeled_loader)
             (uX, _) = enum_Uloader.next()
-        
+
         global_step += 1
 
         images = images.view(images.shape[0], -1)
-        
+
         sl = images.shape
         minibatch_size = len(labels)
 
@@ -99,8 +105,8 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
             targets_u = pt / pt.sum(dim=1, keepdim=True)
             targets_u = targets_u.detach()
 
-        
-        print(targets_u.shape)
+
+        #print(targets_u.shape)
         output = model(input_var)
 
 
@@ -148,14 +154,14 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
         print("Time - {}".format((start_time-end)))
         print("Student - Epoch {} - Training loss: {}".format(e,
-                                                              run_loss/len(dat_loader)))
+                                                              run_loss/len(train_loader)))
         print("Teacher - Epoch {} - Training loss: {}".format(e,
-                                                              run_loss_mt/len(dat_loader)))
+                                                              run_loss_mt/len(train_loader)))
         print()
         print("Student - Epoch {} - Training loss: {}".format(e,
-                                                              run_loss_vt/len(dat_loader)))
+                                                              run_loss_vt/len(train_loader)))
         print("Teacher - Epoch {} - Training loss: {}".format(e,
-                                                              run_loss_mt_vt/len(dat_loader)))
+                                                              run_loss_mt_vt/len(train_loader)))
         print()
 
 
@@ -301,7 +307,7 @@ mt_model = nn.Sequential(nn.Linear(23, 128),
 print(model)
 print(mt_model)
 
-
+print('     Total Parameters: %2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
 
 #optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
 #optimizer = optim.Adagrad(model.parameters(), lr=0.01, lr_decay=0,
@@ -311,7 +317,10 @@ optimizer = optim.Adamax(model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1
 #optimizer = optim.ASGD(model.parameters(), lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0.01)
 epochs = args.epochs
 
+
+
 for e in range(epochs):
+    print('\nEpoch: [%d | %d] LR: %f' % (e + 1, args.epochs, args.learning_rate))
     start_time = time.time()
     running_loss = 0
     train(label_loader, unlabel_loader, model, mt_model, optimizer, e, ema_const=0.90)
