@@ -8,7 +8,7 @@ def get_args():
     parser.add_argument('--epochs', default=20, type=int,
                         metavar='N', help='Total number of epochs to run')
 
-    parser.add_argument('--batch_size', default=64, type=int,
+    parser.add_argument('--batch_size', default=128, type=int,
                         metavar='N', help='training batch size')
 
     parser.add_argument('--percent_unlabeled', type=float, default=1.0,

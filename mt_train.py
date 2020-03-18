@@ -32,15 +32,55 @@ print(args.epochs)
 print(args.batch_size)
 print(args.percent_unlabeled)
 
+def interleave_offsets(batch, nu):
+    groups = [batch // (nu + 1)] * (nu + 1)
+    for x in range(batch - sum(groups)):
+        groups[-x - 1] += 1
+    offsets = [0]
+    for g in groups:
+        offsets.append(offsets[-1] + g)
+    assert offsets[-1] == batch
+    return offsets
+
+def interleave(xy, batch):
+    nu = len(xy) - 1
+    offsets = interleave_offsets(batch, nu)
+    xy = [[v[offsets[p]:offsets[p + 1]] for p in range(nu + 1)] for v in xy]
+    for i in range(1, nu + 1):
+        xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
+    return [torch.cat(v, dim=0) for v in xy]
+
+
+def linear_rampup(current, rampup_length=args.epochs):
+    if rampup_length == 0:
+        return 1.0
+    else:
+        current = np.clip(current / rampup_length, 0.0, 1.0)
+        return float(current)
+
+class SemiLoss(object):
+    def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch):
+        probs_u = torch.softmax(outputs_u, dim=1)
+
+        Lx = -torch.mean(torch.sum(F.log_softmax(outputs_x, dim=1) * targets_x, dim=1))
+        Lu = torch.mean((probs_u - targets_u)**2)
+
+        return Lx, Lu, 75 * linear_rampup(epoch)
 
 def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema_const=0.95):
     global global_step
     losses1 = utils.AverageMeter()
-    losses2 = utils.AverageMeter()
+    lossesmt = utils.AverageMeter()
     losses1_vt = utils.AverageMeter()
     losses2_vt = utils.AverageMeter()
+    ws = utils.AverageMeter()
+    
+    losses1_vtmt = utils.AverageMeter()
+    losses2_vtmt = utils.AverageMeter()
+    wsmt = utils.AverageMeter()
     ## Choose between loss criterion ##
     criterion_ce = nn.CrossEntropyLoss(size_average=False)
+    criterion_train = SemiLoss()
     criterion = nn.NLLLoss(size_average=False)
     criterion_mse = nn.MSELoss(size_average=False)
     criterion_kl = nn.KLDivLoss(size_average=False)
@@ -72,7 +112,7 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
         try:
             images, labels = next(enum_Xloader)
         except StopIteration:
-            print("ERROR: Exception 1")
+            #print("ERROR: Exception 1")
             enum_Xloader = iter(train_loader)
             images, labels = next(enum_Xloader)
 
@@ -97,6 +137,7 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
         input_var = Variable(images)
         mt_input = Variable(images)
         target_var = Variable(labels)
+        batch_size = images.size(0)
 
         ## Compute guessed labels for unlabelled##
         with torch.no_grad():
@@ -105,10 +146,41 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
             pt = p**(1/0.5)
             targets_u = pt / pt.sum(dim=1, keepdim=True)
             targets_u = targets_u.detach()
+        
+
+        ## Mixup as discribed in paper ##
+        all_inputs = torch.cat([images, uX], dim=0)
+        all_targets = torch.cat([labels, targets_u], dim=0)
+
+        l = np.random.beta(0.75, 0.75)
+        l = max(1, 1-l)
+        index = torch.randperm(all_inputs.size(0))
+
+        input_a, input_b = all_inputs, all_inputs[index]
+        target_a, target_b = all_targets, all_targets[index]
+
+        mixed_input = 1 * input_a + (1 - l) * input_b
+        mixed_target = 1 * target_a + (1 - l) * target_b
+
+        mixed_input = list(torch.split(mixed_input, batch_size))
+        mixed_input = interleave(mixed_input, batch_size)
+
+        logits = [model(mixed_input[0])]
+        for input in mixed_input[1:]:
+            logits.append(model(input))
+
+        logits = interleave(logits, batch_size)
+
+        logits_x = logits[0]
+        logits_u = torch.cat(logits[1:], dim=0)
+
+
+        Lx, Lu, w = criterion_train(logits_x, mixed_target[:batch_size], logits_u, mixed_target[batch_size:], epoch+i/args.val_iteration)
+        loss = Lx + w * Lu
 
 
         #print(targets_u.shape)
-        output = model(input_var)
+        """output = model(input_var)
 
 
         output_lab = output[:sl[0]]
@@ -130,10 +202,16 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
         ## Get MSE loss ##
         #cl_loss = consistency_criterion(model_out, labels)
         #mt_loss = consistency_criterion(mt_out, labels)
+        """
+        losses1.update(loss.item(), images.size(0))
+        losses1_vt.update(Lx.item(), images.size(0))
+        losses2_vt.update(Lu.item(), images.size(0))
+
+        ws.update(w, images.size(0))
 
         optimizer.zero_grad()
         loss.backward()
-        loss_vt.backward()
+        #loss_vt.backward()
         #loss_mt.backward()
         optimizer.step()
 
@@ -141,30 +219,61 @@ def train(train_loader, unlabeled_loader, model, mt_model, optimizer, epoch, ema
 
         end = time.time()
         run_loss += loss.item()
-        run_loss_mt += loss_mt.item()
-        run_loss_vt += loss_vt.item()
-        run_loss_mt_vt += loss_mt_vt.item()
+        #run_loss_mt += loss_mt.item()
+        #run_loss_vt += loss_vt.item()
+        #run_loss_mt_vt += loss_mt_vt.item()
 
     else:
-        plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
-        plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
+        plotter1.plot('Loss', 'model', 'Model Loss', epoch, losses1.avg)
+        #plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
+        plotter1.plot('Loss_XU', 'labeled_model',
+                      'Loss XU', epoch, losses1_vt.avg)
+        plotter1.plot('Loss_XU', 'unlabeled_model',
+                      'Loss_XU', epoch, losses2_vt.avg)
+
+        """plotter1.plot('Loss', 'student', 'Model Loss', epoch, losses1.avg)
+        #plotter1.plot('Loss', 'teacher', 'Model Loss', epoch, losses2.avg)
         plotter1.plot('Loss_vt', 'student_vt',
                       'Model Loss_vt', epoch, losses1_vt.avg)
         plotter1.plot('Loss_vt', 'teacher_vt',
-                      'Model Loss_vt', epoch, losses2_vt.avg)
+                      'Model Loss_vt', epoch, losses2_vt.avg)"""
         #plotter1.set_text('Log Loss', "Student - Epoch {} - Training loss: {}".format(e, run_loss/len(trainloader)))
         print("Time - {}".format((start_time-end)))
-        print("Student - Epoch {} - Training loss: {}".format(e,
+        """print("Student - Epoch {} - Training loss: {}".format(e,
                                                               run_loss/len(train_loader)))
-        print("Teacher - Epoch {} - Training loss: {}".format(e,
-                                                              run_loss_mt/len(train_loader)))
+        #print("Teacher - Epoch {} - Training loss: {}".format(e,
+        #                                                      run_loss_mt/len(train_loader)))
         print()
         print("Student - Epoch {} - Training loss: {}".format(e,
                                                               run_loss_vt/len(train_loader)))
         print("Teacher - Epoch {} - Training loss: {}".format(e,
                                                               run_loss_mt_vt/len(train_loader)))
+        """
+        print()
+        print("Loss - Epoch {} - Training loss: {}".format(e,
+                                                              losses1.avg))
+        print("loss_x - Epoch {} - Training loss: {}".format(e,
+                                                              losses1_vt.avg))
+        print("loss_u - Epoch {} - Training loss: {}".format(e,
+                                                              losses2_vt.avg))
+        print("     WS - Epoch {} - Training loss: {}".format(e,
+                                                              ws.avg))
         print()
 
+def accuracy(output, target, topk=(1,)):
+    """Computes the precision@k for the specified values of k"""
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
 
 def test(device, model, mt_model, test_loader, epoch):
     """ Test is used to validate the training of the model on unseen data
@@ -172,6 +281,11 @@ def test(device, model, mt_model, test_loader, epoch):
     losses1 = utils.AverageMeter()
     losses2 = utils.AverageMeter()
     criterion = nn.NLLLoss()
+    losses = utils.AverageMeter()
+    top1 = utils.AverageMeter()
+    top5 = utils.AverageMeter()
+
+
 
     model.eval()
     mt_model.eval()
@@ -181,6 +295,7 @@ def test(device, model, mt_model, test_loader, epoch):
     correct2 = 0
 
     with torch.no_grad():
+
 
         for data, target in test_loader:
 
@@ -248,7 +363,6 @@ environments = [envs0, envs1, envs2, envs3]
 
 test_set, test_loader = dataset.get_test_data('Data/ntuple_merged_11.h5')
 
-dataset.get_data('Data/ntuple_merged_11.h5', 250)
 
 # Get visdom ready to go #
 global plotter1

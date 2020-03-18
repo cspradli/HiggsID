@@ -196,7 +196,7 @@ def split(labels, n_label):
 
     return train_lab, train_ul, val_idxs
 
-def data_gen(root, num_labeled):
+def data_gen(input1, num_labeled):
     """ Function to get all necessary (labelled AND unlabelled) data from the HDF5 data files, then turn them all into
     PyTorch datasets """
 
