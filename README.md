@@ -1,7 +1,7 @@
 # HiggsID
 Repositiory for implemented code from paper: url to come
 
-# Required packages/dependancies
+# Required packages/dependencies
 - PyTorch
 - Visdom
 - Numpy
@@ -16,5 +16,5 @@ Repositiory for implemented code from paper: url to come
 - NNET Architectures: ssl_methods/architectures.py
 
 ## Datasets
-- Due to the large size of the data, it can be downloaded in H5 files from the below link
+- Due to the large size of the data, it can be downloaded in H5 files from:
 http://opendata.cern.ch/record/12102
